@@ -1,0 +1,295 @@
+{
+  "scenarios": [
+    {
+      "name": "login",
+      "description": "Login process performance test",
+      "steps": [
+        {
+          "action": "navigate",
+          "url": "",
+          "timeout": 50000
+        },
+        {
+          "action": "wait",
+          "selector": "#accountTypeSelect",
+          "timeout": 5000
+        },
+        {
+          "action": "fill",
+          "selector": "#accountTypeSelect",
+          "value": "${accountType}"
+        },
+        {
+          "action": "fill",
+          "selector": "input[name='username']",
+          "value": "${username}"
+        },
+        {
+          "action": "fill",
+          "selector": "input[name='password']",
+          "value": "${password}"
+        },
+        {
+          "action": "click",
+          "selector": "button[type='submit']"
+        },
+        {
+          "action": "wait",
+          "timeout": 10000
+        }
+      ],
+      "expectedMetrics": {
+        "lcp": 2500,
+        "fid": 100,
+        "cls": 0.1,
+        "ttfb": 600,
+        "totalLoadTime": 5000
+      }
+    },
+    {
+      "name": "dashboard",
+      "description": "Dashboard loading and interaction performance",
+      "steps": [
+        {
+          "action": "navigate",
+          "url": "/dashboard",
+          "timeout": 15000
+        },
+        {
+          "action": "wait",
+          "selector": "[data-testid='dashboard']",
+          "timeout": 10000
+        },
+        {
+          "action": "custom",
+          "customFunction": "measureDashboardWidgets"
+        },
+        {
+          "action": "wait",
+          "timeout": 2000
+        }
+      ],
+      "expectedMetrics": {
+        "lcp": 3000,
+        "fid": 100,
+        "cls": 0.15,
+        "ttfb": 800,
+        "totalLoadTime": 8000
+      }
+    },
+    {
+      "name": "navigation",
+      "description": "Navigation between different sections performance",
+      "steps": [
+        {
+          "action": "navigate",
+          "url": "/dashboard",
+          "timeout": 10000
+        },
+        {
+          "action": "click",
+          "selector": "[data-testid='nav-reports']",
+          "timeout": 5000
+        },
+        {
+          "action": "wait",
+          "selector": "[data-testid='reports-page']",
+          "timeout": 10000
+        },
+        {
+          "action": "click",
+          "selector": "[data-testid='nav-settings']",
+          "timeout": 5000
+        },
+        {
+          "action": "wait",
+          "selector": "[data-testid='settings-page']",
+          "timeout": 10000
+        }
+      ],
+      "expectedMetrics": {
+        "lcp": 2000,
+        "fid": 80,
+        "cls": 0.1,
+        "ttfb": 500,
+        "totalLoadTime": 4000
+      }
+    },
+    {
+      "name": "form-processing",
+      "description": "Form submission and processing performance",
+      "steps": [
+        {
+          "action": "navigate",
+          "url": "/forms/new",
+          "timeout": 10000
+        },
+        {
+          "action": "fill",
+          "selector": "input[name='title']",
+          "value": "Performance Test Form"
+        },
+        {
+          "action": "fill",
+          "selector": "textarea[name='description']",
+          "value": "This is a performance test form submission with detailed content to test form processing speed and response times."
+        },
+        {
+          "action": "fill",
+          "selector": "input[name='category']",
+          "value": "Testing"
+        },
+        {
+          "action": "click",
+          "selector": "button[type='submit']"
+        },
+        {
+          "action": "wait",
+          "selector": "[data-testid='success-message']",
+          "timeout": 15000
+        }
+      ],
+      "expectedMetrics": {
+        "lcp": 2000,
+        "fid": 100,
+        "cls": 0.1,
+        "ttfb": 600,
+        "totalLoadTime": 6000
+      }
+    },
+    {
+      "name": "search-and-filter",
+      "description": "Search and filtering functionality performance",
+      "steps": [
+        {
+          "action": "navigate",
+          "url": "/data/list",
+          "timeout": 10000
+        },
+        {
+          "action": "wait",
+          "selector": "[data-testid='data-table']",
+          "timeout": 8000
+        },
+        {
+          "action": "fill",
+          "selector": "input[data-testid='search']",
+          "value": "performance test"
+        },
+        {
+          "action": "wait",
+          "timeout": 2000
+        },
+        {
+          "action": "click",
+          "selector": "[data-testid='filter-dropdown']"
+        },
+        {
+          "action": "click",
+          "selector": "[data-testid='filter-active']"
+        },
+        {
+          "action": "wait",
+          "timeout": 3000
+        }
+      ],
+      "expectedMetrics": {
+        "lcp": 2500,
+        "fid": 80,
+        "cls": 0.1,
+        "ttfb": 500,
+        "totalLoadTime": 5000
+      }
+    },
+    {
+      "name": "file-upload",
+      "description": "File upload functionality performance",
+      "steps": [
+        {
+          "action": "navigate",
+          "url": "/upload",
+          "timeout": 10000
+        },
+        {
+          "action": "custom",
+          "customFunction": "uploadTestFile"
+        },
+        {
+          "action": "wait",
+          "selector": "[data-testid='upload-success']",
+          "timeout": 30000
+        }
+      ],
+      "expectedMetrics": {
+        "lcp": 2000,
+        "fid": 100,
+        "cls": 0.1,
+        "ttfb": 800,
+        "totalLoadTime": 10000
+      }
+    }
+  ],
+  "testData": {
+    "users": [
+      {
+        "username": "testuser1@example.com",
+        "password": "TestPassword123!"
+      },
+      {
+        "username": "testuser2@example.com",
+        "password": "TestPassword456!"
+      },
+      {
+        "username": "performancetest@example.com",
+        "password": "PerfTest789!"
+      }
+    ],
+    "searchTerms": [
+      "performance",
+      "test data",
+      "automation",
+      "metrics"
+    ],
+    "formData": {
+      "basic": {
+        "title": "Performance Test Entry",
+        "description": "Basic performance test form submission",
+        "category": "Testing"
+      },
+      "complex": {
+        "title": "Complex Performance Test Entry with Long Title",
+        "description": "This is a complex form submission with extensive data to test performance under load with multiple fields and longer content that simulates real-world usage patterns.",
+        "category": "Performance Testing",
+        "tags": "performance, testing, automation, metrics",
+        "priority": "high",
+        "notes": "Additional notes field with more content to test form processing capabilities"
+      }
+    }
+  },
+  "environments": {
+    "pre": {
+      "baseUrls": {
+        "app1": "https://pre-app1.example.com",
+        "app2": "https://pre-app2.example.com"
+      },
+      "networkConditions": "3g-slow",
+      "iterations": 5,
+      "parallelRuns": 3
+    },
+    "pro": {
+      "baseUrls": {
+        "app1": "https://app1.example.com",
+        "app2": "https://app2.example.com"
+      },
+      "networkConditions": "4g",
+      "iterations": 3,
+      "parallelRuns": 2
+    }
+  },
+  "customFunctions": {
+    "measureDashboardWidgets": "Measure individual dashboard widget load times",
+    "uploadTestFile": "Upload a test file and measure upload performance",
+    "measureApiResponseTime": "Measure API response times for specific endpoints",
+    "simulateUserInteractions": "Simulate realistic user interaction patterns"
+  }
+}

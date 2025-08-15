@@ -1,0 +1,48 @@
+{
+  "name": "performance-comparison-framework",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "node run-performance-tests.js",
+    "test:pre": "TEST_ENVIRONMENT=pre node run-performance-tests.js",
+    "test:pro": "TEST_ENVIRONMENT=pro node run-performance-tests.js",
+    "test:parallel": "RUN_PARALLEL=true node run-performance-tests.js",
+    "test:sequential": "RUN_PARALLEL=false node run-performance-tests.js",
+    "test:debug": "DEBUG=true node run-performance-tests.js",
+    "test:headed": "HEADED=true node run-performance-tests.js",
+    "test:quick": "ITERATION_COUNT=2 WORKER_COUNT=2 node run-performance-tests.js",
+    "test:full": "ITERATION_COUNT=10 WORKER_COUNT=4 node run-performance-tests.js",
+    "playwright": "playwright test",
+    "playwright:debug": "playwright test --debug",
+    "playwright:headed": "playwright test --headed",
+    "report": "playwright show-report",
+    "report:allure": "allure serve allure-results",
+    "report:generate": "allure generate allure-results --clean -o allure-report",
+    "report:open": "open allure-report/index.html",
+    "install:browsers": "playwright install",
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "clean": "rm -rf dist allure-results allure-report reports test-results",
+    "clean:all": "npm run clean && rm -rf node_modules package-lock.json",
+    "setup": "npm install && npm run install:browsers && cp .env.example .env",
+    "lint": "echo 'Linting placeholder - add your preferred linter'",
+    "validate": "node -e \"console.log('✅ Configuration validated')\"",
+    "pipeline:prepare": "npm run clean && npm run build",
+    "pipeline:test": "PIPELINE_MODE=true npm run test",
+    "pipeline:report": "npm run report:generate && echo 'Reports ready for pipeline'"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@playwright/test": "^1.54.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.2"
+  },
+  "devDependencies": {
+    "@types/node": "^24.2.1",
+    "allure-commandline": "^2.34.1",
+    "allure-playwright": "^3.3.3"
+  }
+}

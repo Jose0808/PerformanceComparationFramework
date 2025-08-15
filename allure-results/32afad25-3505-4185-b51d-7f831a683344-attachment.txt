@@ -1,0 +1,56 @@
+❌ Iteration 1 failed: locator.waitFor: Timeout 10000ms exceeded.
+Call log:
+  - waiting for locator('[data-testid="username"], #username, input[name="username"], input[type="email"]') to be visible
+
+    at LoginPage.waitForElement (C:\Proyectos\performance-comparison-framework\src\pages\base.page.ts:50:19)
+    at LoginPage.verifyLoginPageLoaded (C:\Proyectos\performance-comparison-framework\src\pages\login.page.ts:128:16)
+    at LoginPage.navigateToLogin (C:\Proyectos\performance-comparison-framework\src\pages\login.page.ts:27:5)
+    at ScenarioRunner.runScenarioWithAuth (C:\Proyectos\performance-comparison-framework\src\utils\scenario-runner.ts:364:7)
+    at C:\Proyectos\performance-comparison-framework\src\tests\performance-comparison.spec.ts:48:28 {
+  name: 'TimeoutError',
+  [Symbol(step)]: {
+    stepId: 'pw:api@16',
+    location: {
+      file: 'C:\\Proyectos\\performance-comparison-framework\\src\\pages\\base.page.ts',
+      line: 50,
+      column: 19,
+      function: 'LoginPage.waitForElement'
+    },
+    category: 'pw:api',
+    title: `Wait for selector locator('[data-testid="username"], #username, input[name="username"], input[type="email"]')`,
+    apiName: 'locator.waitFor',
+    params: {
+      selector: '[data-testid="username"], #username, input[name="username"], input[type="email"]',
+      strict: true,
+      omitReturnValue: true,
+      state: 'visible',
+      timeout: 10000
+    },
+    boxedStack: undefined,
+    steps: [],
+    attachmentIndices: [],
+    info: TestStepInfoImpl {
+      annotations: [],
+      _testInfo: [TestInfoImpl],
+      _stepId: 'pw:api@16',
+      skip: [Function (anonymous)]
+    },
+    complete: [Function: complete],
+    endWallTime: 1755207585516,
+    error: {
+      message: 'TimeoutError: locator.waitFor: Timeout 10000ms exceeded.\n' +
+        'Call log:\n' +
+        `\x1B[2m  - waiting for locator('[data-testid="username"], #username, input[name="username"], input[type="email"]') to be visible\x1B[22m\n`,
+      stack: 'TimeoutError: locator.waitFor: Timeout 10000ms exceeded.\n' +
+        'Call log:\n' +
+        `\x1B[2m  - waiting for locator('[data-testid="username"], #username, input[name="username"], input[type="email"]') to be visible\x1B[22m\n` +
+        '\n' +
+        '    at LoginPage.waitForElement (C:\\Proyectos\\performance-comparison-framework\\src\\pages\\base.page.ts:50:19)\n' +
+        '    at LoginPage.verifyLoginPageLoaded (C:\\Proyectos\\performance-comparison-framework\\src\\pages\\login.page.ts:128:16)\n' +
+        '    at LoginPage.navigateToLogin (C:\\Proyectos\\performance-comparison-framework\\src\\pages\\login.page.ts:27:5)\n' +
+        '    at ScenarioRunner.runScenarioWithAuth (C:\\Proyectos\\performance-comparison-framework\\src\\utils\\scenario-runner.ts:364:7)\n' +
+        '    at C:\\Proyectos\\performance-comparison-framework\\src\\tests\\performance-comparison.spec.ts:48:28',
+      cause: undefined
+    }
+  }
+}

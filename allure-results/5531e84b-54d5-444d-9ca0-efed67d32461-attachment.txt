@@ -1,0 +1,25 @@
+
+🚀 Starting Performance Comparison Tests
+📊 Environment: pre
+🔄 Iterations per scenario: 5
+📝 Scenarios: login, dashboard, navigation, form-processing
+
+
+📱 Legacy Application - dashboard - Iteration 1/5
+  Performing login...
+
+🔍 Analyzing Results...
+
+
+🎯 OVERALL PERFORMANCE SUMMARY
+==================================================
+📱 Legacy Application: 0/0 wins (NaN%)
+🆕 New Application: 0/0 wins (NaN%)
+🤝 Ties: 0/0 (NaN%)
+
+🏆 Overall Winner: TIE
+
+✅ No significant performance regressions detected
+
+📄 Detailed reports will be generated in the reports/ directory
+🔍 Run "npm run report:allure" to view interactive reports

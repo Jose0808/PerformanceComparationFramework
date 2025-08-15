@@ -1,0 +1,60 @@
+  Scenario failed: TimeoutError: locator.waitFor: Timeout 5000ms exceeded.
+Call log:
+  - waiting for locator('input[name=\'username\']') to be visible
+
+❌ Iteration 1 failed: locator.waitFor: Timeout 5000ms exceeded.
+Call log:
+  - waiting for locator('input[name=\'username\']') to be visible
+
+    at ScenarioRunner.executeWaitStep (C:\Proyectos\performance-comparison-framework\src\utils\scenario-runner.ts:180:21)
+    at ScenarioRunner.executeStep (C:\Proyectos\performance-comparison-framework\src\utils\scenario-runner.ts:113:20)
+    at ScenarioRunner.runScenario (C:\Proyectos\performance-comparison-framework\src\utils\scenario-runner.ts:68:20)
+    at ScenarioRunner.runScenarioWithAuth (C:\Proyectos\performance-comparison-framework\src\utils\scenario-runner.ts:373:12)
+    at C:\Proyectos\performance-comparison-framework\src\tests\performance-comparison.spec.ts:104:28 {
+  name: 'TimeoutError',
+  [Symbol(step)]: {
+    stepId: 'pw:api@12',
+    location: {
+      file: 'C:\\Proyectos\\performance-comparison-framework\\src\\utils\\scenario-runner.ts',
+      line: 180,
+      column: 21,
+      function: 'ScenarioRunner.executeWaitStep'
+    },
+    category: 'pw:api',
+    title: "Wait for selector locator('input[name=\\'username\\']')",
+    apiName: 'locator.waitFor',
+    params: {
+      selector: "input[name='username']",
+      strict: true,
+      omitReturnValue: true,
+      state: 'visible',
+      timeout: 5000
+    },
+    boxedStack: undefined,
+    steps: [],
+    attachmentIndices: [],
+    info: TestStepInfoImpl {
+      annotations: [],
+      _testInfo: [TestInfoImpl],
+      _stepId: 'pw:api@12',
+      skip: [Function (anonymous)]
+    },
+    complete: [Function: complete],
+    endWallTime: 1755210052419,
+    error: {
+      message: 'TimeoutError: locator.waitFor: Timeout 5000ms exceeded.\n' +
+        'Call log:\n' +
+        "\x1B[2m  - waiting for locator('input[name=\\'username\\']') to be visible\x1B[22m\n",
+      stack: 'TimeoutError: locator.waitFor: Timeout 5000ms exceeded.\n' +
+        'Call log:\n' +
+        "\x1B[2m  - waiting for locator('input[name=\\'username\\']') to be visible\x1B[22m\n" +
+        '\n' +
+        '    at ScenarioRunner.executeWaitStep (C:\\Proyectos\\performance-comparison-framework\\src\\utils\\scenario-runner.ts:180:21)\n' +
+        '    at ScenarioRunner.executeStep (C:\\Proyectos\\performance-comparison-framework\\src\\utils\\scenario-runner.ts:113:20)\n' +
+        '    at ScenarioRunner.runScenario (C:\\Proyectos\\performance-comparison-framework\\src\\utils\\scenario-runner.ts:68:20)\n' +
+        '    at ScenarioRunner.runScenarioWithAuth (C:\\Proyectos\\performance-comparison-framework\\src\\utils\\scenario-runner.ts:373:12)\n' +
+        '    at C:\\Proyectos\\performance-comparison-framework\\src\\tests\\performance-comparison.spec.ts:104:28',
+      cause: undefined
+    }
+  }
+}
