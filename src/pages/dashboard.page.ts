@@ -1,338 +1,111 @@
-import { Page } from '@playwright/test';
+import { Page, Locator } from '@playwright/test';
 import { BasePage } from './base.page';
-import { ApplicationConfig } from '../types';
+import { AppConfig } from '../config/ConfigManager';
+import { FrameOptionsByRole } from '../types/frameOptions';
 
 export class DashboardPage extends BasePage {
-  // Selectors - Customize these for your dashboard
-  private selectors = {
-    dashboardContainer: '[data-testid="dashboard"], .dashboard, main, #main-content',
-    loadingSpinner: '[data-testid="loading"], .loading, .spinner, .skeleton',
-    navigationMenu: '[data-testid="navigation"], .nav, .sidebar, nav',
-    userProfile: '[data-testid="user-profile"], .user-info, .profile',
-    
-    // Dashboard widgets/components
-    widgets: {
-      charts: '[data-testid="chart"], .chart, canvas, svg',
-      tables: '[data-testid="table"], .table, table',
-      cards: '[data-testid="card"], .card, .widget',
-      stats: '[data-testid="stats"], .stats, .metrics'
-    },
-    
-    // Interactive elements
-    filters: '[data-testid="filter"], .filter, .search-filter',
-    searchBox: '[data-testid="search"], input[type="search"], .search-input',
-    refreshButton: '[data-testid="refresh"], .refresh, [aria-label*="refresh"]',
-    
-    // Content areas
-    mainContent: '[data-testid="main-content"], .main-content, .content-area',
-    sidePanel: '[data-testid="side-panel"], .side-panel, .sidebar-content'
-  };
+  [x: string]: any;
+  // Generic selectors that should work for most login forms
+  private readonly successIndicators = '#sitemap';
+  private readonly siteMap = '#sitemap';
 
-  constructor(page: Page, appConfig: ApplicationConfig) {
-    super(page, appConfig);
+  private readonly currentFrame = "div:nth-child(3) > iframe";
+  private readonly integratedOperation: FrameOptionsByRole = { role: "listitem", options: { name: "Operación Integrada (Nuevo)" } };
+  private readonly individual360View: FrameOptionsByRole = { role: "link", options: { name: "Vista 360° Individual" } };
+
+  constructor(page: Page) {
+    super(page);
   }
 
   /**
-   * Navigate to dashboard and measure load time
+   * Select option left menu
    */
-  async navigateToDashboard(): Promise<number> {
-    const dashboardUrl = `${this.appConfig.baseUrl}/dashboard`;
-    const navigationTime = await this.navigateTo(dashboardUrl);
-    
-    await this.verifyDashboardLoaded();
-    return navigationTime;
-  }
+  async selectLeftMenu(menu: string): Promise<void> {
+    const StartTime = Date.now();
+    console.log(`Starting select menu`);
 
-  /**
-   * Wait for dashboard to fully load and measure components
-   */
-  async measureDashboardLoad(): Promise<{
-    totalLoadTime: number;
-    containerLoadTime: number;
-    navigationLoadTime: number;
-    widgetsLoadTime: number;
-    dataLoadTime: number;
-  }> {
-    const startTime = Date.now();
-    
-    // Measure container load
-    const containerStartTime = Date.now();
-    await this.waitForElement(this.selectors.dashboardContainer);
-    const containerLoadTime = Date.now() - containerStartTime;
-
-    // Measure navigation load
-    const navigationStartTime = Date.now();
-    await this.waitForElement(this.selectors.navigationMenu);
-    const navigationLoadTime = Date.now() - navigationStartTime;
-
-    // Measure widgets load
-    const widgetsLoadTime = await this.measureWidgetsLoad();
-
-    // Measure data load (wait for loading spinners to disappear)
-    const dataLoadTime = await this.measureDataLoad();
-
-    const totalLoadTime = Date.now() - startTime;
-
-    // Store metrics
-    this.setCustomMetric('dashboard_total_load', totalLoadTime);
-    this.setCustomMetric('dashboard_container_load', containerLoadTime);
-    this.setCustomMetric('dashboard_navigation_load', navigationLoadTime);
-    this.setCustomMetric('dashboard_widgets_load', widgetsLoadTime);
-    this.setCustomMetric('dashboard_data_load', dataLoadTime);
-
-    return {
-      totalLoadTime,
-      containerLoadTime,
-      navigationLoadTime,
-      widgetsLoadTime,
-      dataLoadTime
-    };
-  }
-
-  /**
-   * Measure time for widgets/components to load
-   */
-  private async measureWidgetsLoad(): Promise<number> {
-    const startTime = Date.now();
-    
     try {
-      // Wait for different types of widgets
-      const widgetPromises = [
-        this.measureContentLoad(this.selectors.widgets.charts, 'charts'),
-        this.measureContentLoad(this.selectors.widgets.tables, 'tables'),
-        this.measureContentLoad(this.selectors.widgets.cards, 'cards'),
-        this.measureContentLoad(this.selectors.widgets.stats, 'stats')
-      ];
+      // Submit form
+      await this.clickElement(this.siteMap, "Menu_Button");
+      const frameSelector = await this.page.locator(this.currentFrame).contentFrame();
+      await frameSelector.getByRole(this.integratedOperation.role, { name: menu }).waitFor({
+        state: 'visible',
+        timeout: this.config.test.timeout
+      });
 
-      await Promise.allSettled(widgetPromises);
+      const EndTime = Date.now();
+      const totalTime = EndTime - StartTime;
+
+      await this.metricsCollector.recordCustomMetric('total_select_menu_time', totalTime);
+      console.log(`✅ Select menu completed successfully in ${totalTime}ms`);
+
+      // Collect final performance metrics
+      await this.collectPerformanceMetrics();
+
     } catch (error) {
-      console.warn('Some widgets failed to load within timeout');
-    }
+      const EndTime = Date.now();
+      const totalTime = EndTime - StartTime;
+      await this.metricsCollector.recordCustomMetric('failed_select_menu_time', totalTime);
+      console.error(`❌ Select Menu failed for after ${totalTime}ms:`, error);
 
-    return Date.now() - startTime;
+      throw error;
+    }
   }
 
   /**
-   * Measure data loading time (when spinners disappear)
+   * Select option left menu Map Site
    */
-  private async measureDataLoad(): Promise<number> {
-    const startTime = Date.now();
-    
+  async selectMenuMapSite(menu: string, subMenu: string): Promise<void> {
+    const StartTime = Date.now();
+    console.log(`Starting select menu map site`);
+
     try {
-      // Wait for loading spinners to appear and then disappear
-      const spinners = this.page.locator(this.selectors.loadingSpinner);
-      const spinnerCount = await spinners.count();
-      
-      if (spinnerCount > 0) {
-        // Wait for all spinners to disappear
-        await spinners.first().waitFor({ state: 'detached', timeout: 30000 });
-      }
-      
-      // Additional wait for network to be idle
-      await this.waitForNetworkIdle();
-      
+      const frameSelector = await this.page.locator(this.currentFrame).contentFrame();
+      await frameSelector.getByRole(this.integratedOperation.role, { name: menu }).click();
+      await frameSelector.getByRole(this.individual360View.role, { name: subMenu }).click();
+
+      const EndTime = Date.now();
+      const totalTime = EndTime - StartTime;
+
+      await this.metricsCollector.recordCustomMetric('total_select_menu_map_site_time', totalTime);
+      console.log(`✅ Select menu map site completed successfully in ${totalTime}ms`);
+
+      // Collect final performance metrics
+      await this.collectPerformanceMetrics();
+
     } catch (error) {
-      console.warn('Data loading measurement timeout');
+      const EndTime = Date.now();
+      const totalTime = EndTime - StartTime;
+      await this.metricsCollector.recordCustomMetric('failed_select_menu_map_site_time', totalTime);
+      console.error(`❌ Select Menu map site failed for after ${totalTime}ms:`, error);
+
+      throw error;
     }
-
-    return Date.now() - startTime;
   }
 
   /**
-   * Verify dashboard loaded correctly
+   * Wait for successful login indicators
    */
-  async verifyDashboardLoaded(): Promise<void> {
-    await this.verifyPageLoaded('/dashboard');
-    
-    // Verify essential dashboard elements
-    await this.waitForElement(this.selectors.dashboardContainer);
-    await this.waitForElement(this.selectors.navigationMenu);
-  }
+  async waitForSuccessfulLogin(): Promise<void> {
+    const startTime = Date.now();
+    console.log('Waiting for successful login indicators');
 
-  /**
-   * Measure search functionality performance
-   */
-  async measureSearchPerformance(searchTerm: string): Promise<number> {
-    if (!await this.elementExists(this.selectors.searchBox, 2000)) {
-      return 0;
-    }
-
-    const searchTime = await this.metricsCollector.measureActionTime(async () => {
-      await this.fillAndMeasure(this.selectors.searchBox, searchTerm, 'search');
-      await this.page.keyboard.press('Enter');
-      await this.waitForNetworkIdle();
-    });
-
-    this.setCustomMetric('dashboard_search_time', searchTime);
-    return searchTime;
-  }
-
-  /**
-   * Measure filter application performance
-   */
-  async measureFilterPerformance(): Promise<number> {
-    if (!await this.elementExists(this.selectors.filters, 2000)) {
-      return 0;
-    }
-
-    const filterTime = await this.metricsCollector.measureActionTime(async () => {
-      const firstFilter = this.page.locator(this.selectors.filters).first();
-      await firstFilter.click();
-      await this.waitForNetworkIdle();
-    });
-
-    this.setCustomMetric('dashboard_filter_time', filterTime);
-    return filterTime;
-  }
-
-  /**
-   * Measure refresh functionality
-   */
-  async measureRefreshPerformance(): Promise<number> {
-    if (!await this.elementExists(this.selectors.refreshButton, 2000)) {
-      return 0;
-    }
-
-    const refreshTime = await this.metricsCollector.measureActionTime(async () => {
-      await this.clickAndMeasure(this.selectors.refreshButton, 'refresh');
-      await this.measureDataLoad();
-    });
-
-    this.setCustomMetric('dashboard_refresh_time', refreshTime);
-    return refreshTime;
-  }
-
-  /**
-   * Measure navigation between dashboard sections
-   */
-  async measureSectionNavigation(sectionName: string, sectionSelector: string): Promise<number> {
-    const navigationTime = await this.metricsCollector.measureActionTime(async () => {
-      await this.clickAndMeasure(sectionSelector, `navigation_${sectionName}`);
-      await this.waitForNetworkIdle();
-    });
-
-    this.setCustomMetric(`dashboard_nav_${sectionName}`, navigationTime);
-    return navigationTime;
-  }
-
-  /**
-   * Count and measure different types of content
-   */
-  async measureContentMetrics(): Promise<{
-    chartCount: number;
-    tableCount: number;
-    cardCount: number;
-    chartLoadTime: number;
-    tableLoadTime: number;
-  }> {
-    const [chartCount, tableCount, cardCount] = await Promise.all([
-      this.page.locator(this.selectors.widgets.charts).count(),
-      this.page.locator(this.selectors.widgets.tables).count(),
-      this.page.locator(this.selectors.widgets.cards).count()
-    ]);
-
-    // Measure specific content load times
-    const chartLoadTime = chartCount > 0 ? await this.measureContentLoad(this.selectors.widgets.charts, 'charts_detailed') : 0;
-    const tableLoadTime = tableCount > 0 ? await this.measureContentLoad(this.selectors.widgets.tables, 'tables_detailed') : 0;
-
-    return {
-      chartCount,
-      tableCount,
-      cardCount,
-      chartLoadTime,
-      tableLoadTime
-    };
-  }
-
-  /**
-   * Measure API calls made by dashboard
-   */
-  async measureApiCalls(): Promise<{ [endpoint: string]: number }> {
-    const apiTimes: { [endpoint: string]: number } = {};
-    
-    const commonEndpoints = [
-      '/api/dashboard/data',
-      '/api/dashboard/stats',
-      '/api/dashboard/charts',
-      '/api/user/profile',
-      '/api/notifications'
-    ];
-
-    for (const endpoint of commonEndpoints) {
-      try {
-        const apiTime = await this.waitForApiResponse(endpoint, 5000);
-        apiTimes[endpoint] = apiTime;
-      } catch {
-        // API endpoint might not exist or timeout
+    try {
+      const exists = await this.elementExists(this.successIndicators);
+      if (!exists) {
+        throw new Error(`Login may have failed - still seeing login elements: ${this.successIndicators}`);
       }
+      console.log(`Login success detected with indicator: ${this.successIndicators}`);
+    } catch {
+      throw new Error('Login success not found');
     }
+    await this.waitFoLoad();
 
-    return apiTimes;
+    const endTime = Date.now();
+    const waitTime = endTime - startTime;
+
+    await this.metricsCollector.recordCustomMetric('login_success_wait_time', waitTime);
+    console.log(`Login success verification completed in ${waitTime}ms`);
   }
 
-  /**
-   * Perform comprehensive dashboard performance test
-   */
-  async performComprehensiveTest(): Promise<{
-    loadMetrics: any;
-    contentMetrics: any;
-    apiMetrics: any;
-    interactionMetrics: {
-      searchTime: number;
-      filterTime: number;
-      refreshTime: number;
-    };
-  }> {
-    // Setup performance monitoring
-    await this.setupPerformanceMonitoring();
-
-    // Navigate and measure initial load
-    await this.navigateToDashboard();
-    const loadMetrics = await this.measureDashboardLoad();
-
-    // Measure content
-    const contentMetrics = await this.measureContentMetrics();
-
-    // Measure API calls
-    const apiMetrics = await this.measureApiCalls();
-
-    // Measure interactions
-    const searchTime = await this.measureSearchPerformance('test search');
-    const filterTime = await this.measureFilterPerformance();
-    const refreshTime = await this.measureRefreshPerformance();
-
-    const interactionMetrics = {
-      searchTime,
-      filterTime,
-      refreshTime
-    };
-
-    return {
-      loadMetrics,
-      contentMetrics,
-      apiMetrics,
-      interactionMetrics
-    };
-  }
-
-  /**
-   * Get user information from dashboard
-   */
-  async getUserInfo(): Promise<string | null> {
-    if (await this.elementExists(this.selectors.userProfile, 2000)) {
-      return await this.page.locator(this.selectors.userProfile).textContent();
-    }
-    return null;
-  }
-
-  /**
-   * Check if dashboard has loaded with data
-   */
-  async isDashboardDataLoaded(): Promise<boolean> {
-    // Check if there are no loading spinners and content is present
-    const hasLoadingSpinners = await this.elementExists(this.selectors.loadingSpinner, 1000);
-    const hasContent = await this.elementExists(this.selectors.mainContent, 1000);
-    
-    return !hasLoadingSpinners && hasContent;
-  }
 }

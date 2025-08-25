@@ -1,206 +1,460 @@
 import { Page, Locator, expect } from '@playwright/test';
-import { MetricsCollector } from '../utils/metrics-collector';
-import { ApplicationConfig } from '../types';
+import { ConfigManager } from '../config/ConfigManager';
+import { MetricsCollector } from '../metrics/MetricsCollector';
 
+/**
+ * Abstract base class for all page objects in the test framework.
+ * Provides common functionality for page navigation, element interaction,
+ * performance monitoring, and utility methods.
+ */
 export abstract class BasePage {
-  protected page: Page;
-  protected metricsCollector: MetricsCollector;
-  protected appConfig: ApplicationConfig;
-  protected customMetrics: { [key: string]: number } = {};
+  protected readonly page: Page;
+  protected readonly config: ConfigManager;
+  protected readonly metricsCollector: MetricsCollector;
 
-  constructor(page: Page, appConfig: ApplicationConfig) {
+  constructor(page: Page) {
     this.page = page;
-    this.appConfig = appConfig;
+    this.config = ConfigManager.getInstance();
     this.metricsCollector = new MetricsCollector(page);
   }
 
+  // =============================================
+  // NAVIGATION METHODS
+  // =============================================
+
   /**
-   * Navigate to a specific URL and wait for load
+   * Navigate to a specific URL with performance tracking and comprehensive wait strategies
+   * @param url - Target URL to navigate to
+   * @param options - Additional navigation options
    */
-  async navigateTo(url: string, waitForLoad: boolean = true): Promise<number> {
-    const startTime = Date.now();
-    
-    await this.page.goto(url, { 
-      waitUntil: 'domcontentloaded',
-      timeout: 30000 
-    });
-    
-    if (waitForLoad) {
-      await this.metricsCollector.waitForPageLoad();
+  async goto(url: string, options?: {
+    waitUntil?: 'load' | 'domcontentloaded' | 'networkidle' | 'commit';
+    timeout?: number;
+    referer?: string;
+  }): Promise<void> {
+    const startTime = performance.now();
+
+    try {
+      console.log(`Navigating to: ${url}`);
+
+      await this.page.goto(url, {
+        waitUntil: options?.waitUntil || 'networkidle',
+        timeout: options?.timeout || (this.config.test.timeout * 1000),
+        referer: options?.referer
+      });
+
+      await this.waitForPageLoad();
+
+      const navigationTime = performance.now() - startTime;
+      await this.metricsCollector.recordCustomMetric('navigationTime', navigationTime);
+
+      console.log(`Navigation completed in ${navigationTime.toFixed(2)}ms`);
+    } catch (error) {
+      console.error(`Navigation failed for URL: ${url}`, error);
+      throw new Error(`Failed to navigate to ${url}: ${error}`);
     }
-    
-    const navigationTime = Date.now() - startTime;
-    this.customMetrics['navigationTime'] = navigationTime;
-    
-    return navigationTime;
   }
 
   /**
-   * Navigate to base URL
+   * Refresh the current page with performance tracking
    */
-  async navigateToHome(): Promise<number> {
-    return await this.navigateTo(this.appConfig.baseUrl);
+  async refresh(): Promise<void> {
+    const startTime = performance.now();
+
+    await this.page.reload({ waitUntil: 'networkidle' });
+    await this.waitForPageLoad();
+
+    const refreshTime = performance.now() - startTime;
+    await this.metricsCollector.recordCustomMetric('refreshTime', refreshTime);
   }
 
   /**
-   * Wait for element to be visible with timeout
+   * Navigate back in browser history
    */
-  async waitForElement(selector: string, timeout: number = 10000): Promise<Locator> {
+  async goBack(): Promise<void> {
+    await this.page.goBack({ waitUntil: 'networkidle' });
+    await this.waitForPageLoad();
+  }
+
+  /**
+   * Navigate forward in browser history
+   */
+  async goForward(): Promise<void> {
+    await this.page.goForward({ waitUntil: 'networkidle' });
+    await this.waitForPageLoad();
+  }
+
+  // =============================================
+  // ELEMENT INTERACTION METHODS
+  // =============================================
+
+  /**
+   * Wait for element to be visible with enhanced error handling
+   * @param selector - Element selector
+   * @param timeout - Optional timeout override
+   * @returns Promise<Locator>
+   */
+  async waitForElement(selector: string, description?: string, timeout?: number): Promise<Locator> {
+    const startTime = performance.now();
+    try {
+      const element = this.page.locator(selector);
+      await element.waitFor({
+        state: 'visible',
+        timeout: timeout || this.config.test.timeout
+      });
+      const totalTime = performance.now() - startTime;
+      await this.metricsCollector.recordCustomMetric(`Wait_${description || selector}`, totalTime);
+
+      return element;
+
+    } catch (error) {
+      throw new Error(`Element not found or not visible: ${selector}. ${error}`);
+    }
+  }
+
+
+  /**
+   * Wait for element to be visible and enabled
+   * @param selector - Element selector
+   * @param timeout - Optional timeout override
+   * @returns Promise<Locator>
+   */
+  async waitForElementEnabled(selector: string, timeout?: number): Promise<Locator> {
+    try {
+      const element = this.page.locator(selector);
+      await element.waitFor({
+        state: 'visible',
+        timeout: timeout || this.config.test.timeout
+      });
+      await expect(element).toBeEnabled({ timeout: timeout || this.config.test.timeout });
+      return element;
+    } catch (error) {
+      throw new Error(`Element not found, not visible, or not enabled: ${selector}. ${error}`);
+    }
+  }
+
+  /**
+   * Wait for element to be attached to DOM
+   * @param selector - Element selector
+   * @param timeout - Optional timeout override
+   * @returns Promise<Locator>
+   */
+  async waitForElementAttached(selector: string, timeout?: number): Promise<Locator> {
     const element = this.page.locator(selector);
-    await element.waitFor({ state: 'visible', timeout });
+    await element.waitFor({
+      state: 'attached',
+      timeout: timeout || this.config.test.timeout
+    });
     return element;
   }
 
   /**
-   * Click element and measure time
+   * Click element with enhanced error handling and performance tracking
+   * @param selector - Element selector
+   * @param description - Optional description for metrics
+   * @param options - Click options
    */
-  async clickAndMeasure(selector: string, description?: string): Promise<number> {
-    const element = await this.waitForElement(selector);
-    
-    const clickTime = await this.metricsCollector.measureActionTime(async () => {
+  async clickElement(
+    selector: string,
+    description: string = '',
+    options?: {
+      force?: boolean;
+      timeout?: number;
+      position?: { x: number; y: number };
+      modifiers?: ('Alt' | 'Control' | 'Meta' | 'Shift')[];
+    }
+  ): Promise<void> {
+    const startTime = performance.now();
+
+    try {
+      const element = await this.waitForElement(selector, undefined, options?.timeout);
+      await element.click({
+        force: options?.force,
+        timeout: options?.timeout || this.config.test.timeout,
+        position: options?.position,
+        modifiers: options?.modifiers
+      });
+
+      const clickTime = performance.now() - startTime;
+      await this.metricsCollector.recordCustomMetric(`click_${description || selector}_time`, clickTime);
+    } catch (error) {
+      throw new Error(`Failed to click element: ${selector}. ${error}`);
+    }
+  }
+
+  /**
+   * Click element and wait for it to be enabled first
+   * @param selector - Element selector
+   * @param description - Optional description for metrics
+   */
+  async clickElementAndWait(selector: string, description: string = ''): Promise<void> {
+    const startTime = performance.now();
+
+    try {
+      const element = await this.waitForElementEnabled(selector);
       await element.click();
-      await this.page.waitForLoadState('domcontentloaded');
-    });
-    
-    if (description) {
-      this.customMetrics[`click_${description}`] = clickTime;
+      await this.waitForNetworkIdle()
+
+      const clickTime = performance.now() - startTime;
+      await this.metricsCollector.recordCustomMetric(`click_${description || 'element'}_time`, clickTime);
+    } catch (error) {
+      throw new Error(`Failed to click enabled element: ${selector}. ${error}`);
     }
-    
-    return clickTime;
   }
 
   /**
-   * Fill form field and measure time
+   * Double-click element with performance tracking
+   * @param selector - Element selector
+   * @param description - Optional description for metrics
    */
-  async fillAndMeasure(selector: string, value: string, description?: string): Promise<number> {
-    const element = await this.waitForElement(selector);
-    
-    const fillTime = await this.metricsCollector.measureActionTime(async () => {
+  async doubleClickElement(selector: string, description: string = ''): Promise<void> {
+    const startTime = performance.now();
+
+    try {
+      const element = await this.waitForElement(selector);
+      await element.dblclick();
+
+      const doubleClickTime = performance.now() - startTime;
+      await this.metricsCollector.recordCustomMetric(`doubleClick_${description || 'element'}_time`, doubleClickTime);
+    } catch (error) {
+      throw new Error(`Failed to double-click element: ${selector}. ${error}`);
+    }
+  }
+
+  /**
+   * Right-click element with performance tracking
+   * @param selector - Element selector
+   * @param description - Optional description for metrics
+   */
+  async rightClickElement(selector: string, description: string = ''): Promise<void> {
+    const startTime = performance.now();
+
+    try {
+      const element = await this.waitForElement(selector);
+      await element.click({ button: 'right' });
+
+      const rightClickTime = performance.now() - startTime;
+      await this.metricsCollector.recordCustomMetric(`rightClick_${description || 'element'}_time`, rightClickTime);
+    } catch (error) {
+      throw new Error(`Failed to right-click element: ${selector}. ${error}`);
+    }
+  }
+
+  /**
+   * Fill input field with enhanced validation and performance tracking
+   * @param selector - Input field selector
+   * @param value - Value to fill
+   * @param description - Optional description for metrics
+   * @param options - Fill options
+   */
+  async fillInput(
+    selector: string,
+    value: string,
+    description: string = '',
+    options?: {
+      force?: boolean;
+      timeout?: number;
+      noWaitAfter?: boolean;
+    }
+  ): Promise<void> {
+    const startTime = performance.now();
+
+    try {
+      const element = await this.waitForElement(selector, undefined, options?.timeout);
+
+      // Clear existing content
       await element.clear();
-      await element.fill(value);
-    });
-    
-    if (description) {
-      this.customMetrics[`fill_${description}`] = fillTime;
-    }
-    
-    return fillTime;
-  }
 
-  /**
-   * Submit form and measure time
-   */
-  async submitFormAndMeasure(formSelector: string, description?: string): Promise<number> {
-    const form = await this.waitForElement(formSelector);
-    
-    const submitTime = await this.metricsCollector.measureActionTime(async () => {
-      await form.click();
-      await this.page.waitForLoadState('networkidle');
-    });
-    
-    if (description) {
-      this.customMetrics[`submit_${description}`] = submitTime;
-    }
-    
-    return submitTime;
-  }
+      // Fill with new value
+      await element.fill(value, {
+        force: options?.force,
+        timeout: options?.timeout || this.config.test.timeout,
+        noWaitAfter: options?.noWaitAfter
+      });
 
-  /**
-   * Wait for API response and measure time
-   */
-  async waitForApiResponse(urlPattern: string | RegExp, timeout: number = 10000): Promise<number> {
-    const startTime = Date.now();
-    
-    await this.page.waitForResponse(response => {
-      const url = response.url();
-      if (typeof urlPattern === 'string') {
-        return url.includes(urlPattern);
+      // Verify the value was set correctly
+      const actualValue = await element.inputValue();
+      if (actualValue !== value) {
+        console.warn(`Expected value "${value}" but got "${actualValue}" for selector: ${selector}`);
       }
-      return urlPattern.test(url);
-    }, { timeout });
-    
-    return Date.now() - startTime;
-  }
 
-  /**
-   * Measure time to load specific content
-   */
-  async measureContentLoad(selector: string, description: string): Promise<number> {
-    const startTime = Date.now();
-    await this.waitForElement(selector);
-    const loadTime = Date.now() - startTime;
-    
-    this.customMetrics[`content_${description}`] = loadTime;
-    return loadTime;
-  }
-
-  /**
-   * Take performance snapshot
-   */
-  async takeSnapshot(label: string): Promise<void> {
-    await this.metricsCollector.takePerformanceSnapshot(label);
-  }
-
-  /**
-   * Set custom metric
-   */
-  setCustomMetric(key: string, value: number): void {
-    this.customMetrics[key] = value;
-  }
-
-  /**
-   * Get all custom metrics
-   */
-  getCustomMetrics(): { [key: string]: number } {
-    return { ...this.customMetrics };
-  }
-
-  /**
-   * Verify page loaded correctly
-   */
-  async verifyPageLoaded(expectedUrl?: string): Promise<void> {
-    if (expectedUrl) {
-      await expect(this.page).toHaveURL(new RegExp(expectedUrl));
+      const fillTime = performance.now() - startTime;
+      await this.metricsCollector.recordCustomMetric(`fill_${description || 'input'}_time`, fillTime);
+    } catch (error) {
+      throw new Error(`Failed to fill input: ${selector} with value: ${value}. ${error}`);
     }
-    
-    // Wait for page to be stable
-    await this.page.waitForLoadState('domcontentloaded');
-    await this.page.waitForTimeout(1000);
   }
 
   /**
-   * Handle common errors (alerts, popups, etc.)
+   * Type text with realistic typing simulation
+   * @param selector - Element selector
+   * @param text - Text to type
+   * @param delay - Delay between keystrokes (ms)
    */
-  async handleCommonInterruptions(): Promise<void> {
-    // Handle alerts
-    this.page.on('dialog', async dialog => {
-      console.log(`Dialog appeared: ${dialog.message()}`);
-      await dialog.accept();
+  async typeText(selector: string, text: string, delay: number = 100): Promise<void> {
+    try {
+      const element = await this.waitForElement(selector);
+      await element.type(text, { delay });
+    } catch (error) {
+      throw new Error(`Failed to type text in element: ${selector}. ${error}`);
+    }
+  }
+
+  /**
+   * Fill dropdown/select element with performance tracking
+   * @param selector - Dropdown selector
+   * @param value - Value or option text to select
+   * @param description - Optional description for metrics
+   */
+  async fillDropdown(selector: string, value: string, description: string = ''): Promise<void> {
+    const startTime = performance.now();
+
+    try {
+      const element = this.page.locator(selector);
+      await element.waitFor({
+        state: 'visible',
+        timeout: this.config.test.timeout
+      });
+
+      console.log(`Selecting option "${value}" in dropdown: ${selector}`);
+
+      // Try to select by value first, then by text
+      await element.selectOption({ value });
+
+      const fillTime = performance.now() - startTime;
+      await this.metricsCollector.recordCustomMetric(`fill_${description || 'dropdown'}_time`, fillTime);
+    } catch (error) {
+      throw new Error(`Failed to select option "${value}" in dropdown: ${selector}. ${error}`);
+    }
+  }
+
+
+  /**
+   * Fill dropdown/select element with performance tracking
+   * @param selector - Dropdown selector
+   * @param value - Value or option text to select
+   * @param description - Optional description for metrics
+   */
+  async fillDropdownLabel(selector: string, value: string, description: string = ''): Promise<void> {
+    const startTime = performance.now();
+
+    try {
+      const element = this.page.locator(selector);
+      await element.waitFor({
+        state: 'visible',
+        timeout: this.config.test.timeout
+      });
+
+      console.log(`Selecting option "${value}" in dropdown: ${selector}`);
+
+      await element.selectOption({ label: value });
+
+      const fillTime = performance.now() - startTime;
+      await this.metricsCollector.recordCustomMetric(`fill_${description || 'dropdown'}_time`, fillTime);
+    } catch (error) {
+      throw new Error(`Failed to select option "${value}" in dropdown: ${selector}. ${error}`);
+    }
+  }
+
+  /**
+   * Check/uncheck checkbox or radio button
+   * @param selector - Element selector
+   * @param checked - Whether to check or uncheck
+   */
+  async setCheckbox(selector: string, checked: boolean): Promise<void> {
+    try {
+      const element = await this.waitForElement(selector);
+      await element.setChecked(checked);
+    } catch (error) {
+      throw new Error(`Failed to ${checked ? 'check' : 'uncheck'} element: ${selector}. ${error}`);
+    }
+  }
+
+  /**
+   * Upload file to input element
+   * @param selector - File input selector
+   * @param filePaths - Array of file paths to upload
+   */
+  async uploadFiles(selector: string, filePaths: string[]): Promise<void> {
+    try {
+      const element = await this.waitForElement(selector);
+      await element.setInputFiles(filePaths);
+    } catch (error) {
+      throw new Error(`Failed to upload files to element: ${selector}. ${error}`);
+    }
+  }
+
+  // =============================================
+  // WAIT AND TIMING METHODS
+  // =============================================
+
+  /**
+   * Wait for network to be idle with configurable timeout
+   * @param timeout - Timeout in milliseconds
+   */
+  async waitForNetworkIdle(timeout?: number): Promise<void> {
+    await this.page.waitForLoadState('networkidle', {
+      timeout: timeout || this.config.test.timeout * 1000
     });
+  }
 
-    // Handle potential popups
-    const popup = this.page.locator('[data-testid="popup"], .modal, .overlay');
-    if (await popup.isVisible({ timeout: 2000 })) {
-      const closeButton = popup.locator('button[aria-label*="close"], .close, [data-testid="close"]').first();
-      if (await closeButton.isVisible({ timeout: 1000 })) {
-        await closeButton.click();
-      }
+  /**
+   * Wait for specific text to be visible on the page
+   * @param text - Text to wait for
+   * @param timeout - Optional timeout override
+   */
+  async waitForText(text: string, timeout?: number): Promise<void> {
+    try {
+      await this.page.waitForSelector(`text=${text}`, {
+        timeout: timeout || this.config.test.timeout
+      });
+    } catch (error) {
+      throw new Error(`Text "${text}" not found within timeout. ${error}`);
     }
   }
 
   /**
-   * Wait for network to be idle
+   * Wait for URL to match pattern
+   * @param pattern - URL pattern (string or RegExp)
+   * @param timeout - Optional timeout override
    */
-  async waitForNetworkIdle(timeout: number = 30000): Promise<void> {
-    await this.page.waitForLoadState('networkidle', { timeout });
+  async waitForUrl(pattern: string | RegExp, timeout?: number): Promise<void> {
+    await this.page.waitForURL(pattern, {
+      timeout: timeout || this.config.test.timeout
+    });
   }
+
+  /**
+   * Wait for page to load completely with multiple strategies
+   */
+  async waitForPageLoad(): Promise<void> {
+    await Promise.all([
+      this.page.waitForLoadState('domcontentloaded', { timeout: this.config.test.timeout }),
+      this.page.waitForLoadState('networkidle', { timeout: this.config.test.timeout })
+    ]);
+  }
+
+  /**
+   * Wait for page to load completely with multiple strategies
+   */
+  async waitFoLoad(): Promise<void> {
+    await this.page.waitForLoadState('domcontentloaded', { timeout: this.config.test.timeout });
+  }
+
+
+  // =============================================
+  // VALIDATION AND ASSERTION METHODS
+  // =============================================
 
   /**
    * Check if element exists without throwing error
+   * @param selector - Element selector
+   * @param timeout - Optional timeout for check
+   * @returns Promise<boolean>
    */
-  async elementExists(selector: string, timeout: number = 5000): Promise<boolean> {
+  async elementExists(selector: string, timeout?: number): Promise<boolean> {
     try {
-      await this.page.locator(selector).waitFor({ state: 'visible', timeout });
+      await this.page.waitForSelector(selector, { timeout: (timeout || this.config.test.timeout) });
       return true;
     } catch {
       return false;
@@ -208,42 +462,315 @@ export abstract class BasePage {
   }
 
   /**
-   * Get page title for verification
+   * Check if element is visible
+   * @param selector - Element selector
+   * @returns Promise<boolean>
    */
-  async getPageTitle(): Promise<string> {
+  async isElementVisible(selector: string): Promise<boolean> {
+    try {
+      const element = this.page.locator(selector);
+      return await element.isVisible();
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Check if element is enabled
+   * @param selector - Element selector
+   * @returns Promise<boolean>
+   */
+  async isElementEnabled(selector: string): Promise<boolean> {
+    try {
+      const element = this.page.locator(selector);
+      return await element.isEnabled();
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Check if checkbox/radio is checked
+   * @param selector - Element selector
+   * @returns Promise<boolean>
+   */
+  async isElementChecked(selector: string): Promise<boolean> {
+    try {
+      const element = this.page.locator(selector);
+      return await element.isChecked();
+    } catch {
+      return false;
+    }
+  }
+
+  // =============================================
+  // DATA EXTRACTION METHODS
+  // =============================================
+
+  /**
+   * Get element text content with error handling
+   * @param selector - Element selector
+   * @returns Promise<string>
+   */
+  async getElementText(selector: string): Promise<string> {
+    try {
+      const element = await this.waitForElement(selector);
+      return await element.textContent() || '';
+    } catch (error) {
+      throw new Error(`Failed to get text from element: ${selector}. ${error}`);
+    }
+  }
+
+  /**
+   * Get element inner text (visible text only)
+   * @param selector - Element selector
+   * @returns Promise<string>
+   */
+  async getElementInnerText(selector: string): Promise<string> {
+    try {
+      const element = await this.waitForElement(selector);
+      return await element.innerText();
+    } catch (error) {
+      throw new Error(`Failed to get inner text from element: ${selector}. ${error}`);
+    }
+  }
+
+  /**
+   * Get input field value
+   * @param selector - Input element selector
+   * @returns Promise<string>
+   */
+  async getInputValue(selector: string): Promise<string> {
+    try {
+      const element = await this.waitForElement(selector);
+      return await element.inputValue();
+    } catch (error) {
+      throw new Error(`Failed to get input value from element: ${selector}. ${error}`);
+    }
+  }
+
+  /**
+   * Get element attribute value
+   * @param selector - Element selector
+   * @param attribute - Attribute name
+   * @returns Promise<string | null>
+   */
+  async getElementAttribute(selector: string, attribute: string): Promise<string | null> {
+    try {
+      const element = await this.waitForElement(selector);
+      return await element.getAttribute(attribute);
+    } catch (error) {
+      throw new Error(`Failed to get attribute "${attribute}" from element: ${selector}. ${error}`);
+    }
+  }
+
+  /**
+   * Get all elements matching selector
+   * @param selector - Element selector
+   * @returns Promise<Locator[]>
+   */
+  async getAllElements(selector: string): Promise<Locator[]> {
+    const elements = this.page.locator(selector);
+    const count = await elements.count();
+    const locators: Locator[] = [];
+
+    for (let i = 0; i < count; i++) {
+      locators.push(elements.nth(i));
+    }
+
+    return locators;
+  }
+
+  /**
+   * Get page title
+   * @returns Promise<string>
+   */
+  async getTitle(): Promise<string> {
     return await this.page.title();
   }
 
   /**
    * Get current URL
+   * @returns string
    */
   getCurrentUrl(): string {
     return this.page.url();
   }
 
+  // =============================================
+  // UTILITY AND TESTING METHODS
+  // =============================================
+
   /**
-   * Take screenshot for debugging
+   * Take screenshot with timestamp and custom naming
+   * @param name - Screenshot name
+   * @param options - Screenshot options
+   * @returns Promise<string> - Path to screenshot
    */
-  async takeScreenshot(name: string): Promise<void> {
-    await this.page.screenshot({ 
-      path: `reports/screenshots/${name}-${Date.now()}.png`,
-      fullPage: true 
+  async takeScreenshot(name: string, options?: {
+    fullPage?: boolean;
+    path?: string;
+    quality?: number;
+    type?: 'png' | 'jpeg';
+  }): Promise<string> {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const screenshotPath = options?.path || `screenshots/${name}_${timestamp}.${options?.type || 'png'}`;
+
+    await this.page.screenshot({
+      path: screenshotPath,
+      fullPage: options?.fullPage !== false,
+      quality: options?.quality,
+      type: options?.type
     });
+
+    console.log(`Screenshot saved: ${screenshotPath}`);
+    return screenshotPath;
   }
 
   /**
-   * Setup performance monitoring
+   * Clear browser data (cookies, storage, cache)
    */
-  async setupPerformanceMonitoring(): Promise<void> {
-    await this.metricsCollector.setupPerformanceObservers();
-    await this.metricsCollector.injectWebVitalsLibrary();
+  async clearBrowserData(): Promise<void> {
+    const context = this.page.context();
+    await Promise.all([
+      context.clearCookies(),
+      context.clearPermissions(),
+      this.page.evaluate(() => {
+        localStorage.clear();
+        sessionStorage.clear();
+      })
+    ]);
+    console.log('Browser data cleared');
   }
 
   /**
-   * Clean up resources
+   * Enable network throttling for performance testing
    */
-  async cleanup(): Promise<void> {
-    this.customMetrics = {};
-    // Any other cleanup needed
+  async enableNetworkThrottling(): Promise<void> {
+    const cdp = await this.page.context().newCDPSession(this.page);
+
+    await cdp.send('Network.enable');
+    await cdp.send('Network.emulateNetworkConditions', {
+      offline: false,
+      latency: this.config.network?.latency || 100,
+      downloadThroughput: this.config.network?.downloadThroughput || 750000,
+      uploadThroughput: this.config.network?.uploadThroughput || 250000,
+      connectionType: 'cellular4g'
+    });
+
+    console.log('Network throttling enabled');
+  }
+
+  /**
+   * Disable network throttling
+   */
+  async disableNetworkThrottling(): Promise<void> {
+    const cdp = await this.page.context().newCDPSession(this.page);
+
+    await cdp.send('Network.emulateNetworkConditions', {
+      offline: false,
+      latency: 0,
+      downloadThroughput: -1,
+      uploadThroughput: -1
+    });
+
+    console.log('Network throttling disabled');
+  }
+
+  /**
+   * Scroll to element
+   * @param selector - Element selector
+   */
+  async scrollToElement(selector: string): Promise<void> {
+    try {
+      const element = await this.waitForElement(selector);
+      await element.scrollIntoViewIfNeeded();
+    } catch (error) {
+      throw new Error(`Failed to scroll to element: ${selector}. ${error}`);
+    }
+  }
+
+  /**
+   * Scroll page by pixels
+   * @param x - Horizontal scroll amount
+   * @param y - Vertical scroll amount
+   */
+  async scrollBy(x: number, y: number): Promise<void> {
+    await this.page.evaluate(({ x, y }) => {
+      window.scrollBy(x, y);
+    }, { x, y });
+  }
+
+  /**
+   * Focus on element
+   * @param selector - Element selector
+   */
+  async focusElement(selector: string): Promise<void> {
+    try {
+      const element = await this.waitForElement(selector);
+      await element.focus();
+    } catch (error) {
+      throw new Error(`Failed to focus element: ${selector}. ${error}`);
+    }
+  }
+
+  /**
+   * Hover over element
+   * @param selector - Element selector
+   */
+  async hoverElement(selector: string): Promise<void> {
+    try {
+      const element = await this.waitForElement(selector);
+      await element.hover();
+    } catch (error) {
+      throw new Error(`Failed to hover over element: ${selector}. ${error}`);
+    }
+  }
+
+  // =============================================
+  // MONITORING AND METRICS METHODS
+  // =============================================
+
+  /**
+   * Get console logs from the page
+   * @returns string[]
+   */
+  getConsoleLogs(): string[] {
+    return this.metricsCollector.getConsoleLogs();
+  }
+
+  /**
+   * Get network request logs
+   * @returns any[]
+   */
+  getNetworkLogs(): any[] {
+    return this.metricsCollector.getNetworkLogs();
+  }
+
+  /**
+   * Collect all performance metrics
+   * @returns Promise<any>
+   */
+  async collectPerformanceMetrics(): Promise<any> {
+    return await this.metricsCollector.collectAllMetrics();
+  }
+
+  /**
+   * Get page performance metrics
+   * @returns Promise<any>
+   */
+  async getPageMetrics(): Promise<any> {
+    return await this.page.evaluate(() => {
+      const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
+      const paint = performance.getEntriesByType('paint');
+
+      return {
+        loadTime: navigation.loadEventEnd - navigation.loadEventStart,
+        domContentLoaded: navigation.domContentLoadedEventEnd - navigation.domContentLoadedEventStart,
+        firstPaint: paint.find(p => p.name === 'first-paint')?.startTime || 0,
+        firstContentfulPaint: paint.find(p => p.name === 'first-contentful-paint')?.startTime || 0,
+        timeToInteractive: navigation.domInteractive - navigation.fetchStart
+      };
+    });
   }
 }
