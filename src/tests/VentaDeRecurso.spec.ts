@@ -3,8 +3,14 @@ import { LoginPage } from '../pages/login.page';
 import { ConfigManager } from '../config/ConfigManager';
 import { MetricsCollector } from '../metrics/MetricsCollector';
 import { PerformanceComparator } from '../utils/PerformanceComparator';
+import { datacambiodenumero } from '../types/cambioDeNumero'
+import { DashboardPage } from '../pages/dashboard.page';
+import { Vista360IndividualPage } from '../pages/vista360Individual.page';
+import { BasicInfo } from '../pages/basicInfo.page';
+import { ChangeNumber } from '../pages/changeNumber.page';
+import { Checkout } from '../pages/checkout.page';
 
-test.describe('Latency Comparison - Login Flow', () => {
+test.describe('Latency Comparison - Venta de recurso Flow', () => {
   let config: ConfigManager;
   let performanceComparator: PerformanceComparator;
   config = ConfigManager.getInstance();
@@ -47,13 +53,18 @@ test.describe('Latency Comparison - Login Flow', () => {
 
       // Generate multiple test runs based on iteration count
       for (let iteration = 1; iteration <= config.test.iterations; iteration++) {
-        test(`Login Performance - ${app.name} - Run ${iteration}`, async ({ page }) => {
+        test(`Cambio de Numero Performance - ${app.name} - Run ${iteration}`, async ({ page }) => {
           const testStartTime = Date.now();
 
           console.log(`\n🚀 Starting ${app.name} - Run ${iteration}`);
           console.log(`URL: ${app.baseUrl}`);
 
           let loginPage: LoginPage;
+          let dashboardPage: DashboardPage;
+          let vista360IndividualPage: Vista360IndividualPage;
+          let basicInfo: BasicInfo;
+          let changeNumber: ChangeNumber;
+          let checkout: Checkout;
           let metrics: any;
           let testError: string | undefined;
 
@@ -61,24 +72,40 @@ test.describe('Latency Comparison - Login Flow', () => {
 
             // Initialize page object
             loginPage = new LoginPage(page);
+            dashboardPage = new DashboardPage(page);
+            vista360IndividualPage = new Vista360IndividualPage(page);
+            basicInfo = new BasicInfo(page);
+            changeNumber = new ChangeNumber(page);
+            checkout = new Checkout(page);
 
             // Enable network throttling
             await loginPage.enableNetworkThrottling();
 
             // Execute login flow with performance tracking
-            const loginStartTime = Date.now();
+            const StartTime = Date.now();
+
             await loginPage.login(app);
-            const loginEndTime = Date.now();
+            const menu = "Operación Integrada (Nuevo)";
+            const subMenu = "Vista 360° Individual";
+            await dashboardPage.selectLeftMenu(menu);
+            await dashboardPage.selectMenuMapSite(menu, subMenu);
+            await vista360IndividualPage.searchCustomer(datacambiodenumero.filters);
+            const menuSuscription = "Venta de recurso";
+            await basicInfo.selectSuscription(datacambiodenumero.SuscriptionRow, menuSuscription);
+            await changeNumber.changeNumber();
+            await checkout.checkoutValidate();
+
+            const EndTime = Date.now();
 
             // Collect performance metrics
             metrics = await loginPage.collectPerformanceMetrics();
 
             // Add test execution time
-            metrics.customMetrics.test_execution_time = loginEndTime - loginStartTime;
+            metrics.customMetrics.test_execution_time = EndTime - StartTime;
             metrics.customMetrics.total_test_time = Date.now() - testStartTime;
 
             console.log(`✅ ${app.name} - Run ${iteration} completed successfully`);
-            console.log(`🏃 Login time: ${metrics.customMetrics.total_login_time}ms`);
+            console.log(`🏃 Administrar Base de Conocimiento time: ${metrics.customMetrics.total_login_time}ms`);
             console.log(`📊 LCP: ${metrics.lcp}ms, FCP: ${metrics.fcp}ms, TTFB: ${metrics.ttfb}ms`);
 
             // Validate against thresholds

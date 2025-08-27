@@ -9,28 +9,28 @@ import * as path from 'path';
  */
 async function globalTeardown(config: FullConfig, result: FullResult): Promise<void> {
   console.log('\n🏁 Starting Global Teardown...');
-  
+
   const appConfig = ConfigManager.getInstance();
-  
+
   try {
     // Update performance tracking
     await updatePerformanceTracking(result);
-    
+
     // Generate final summary
     await generateFinalSummary(appConfig, result);
-    
+
     // Cleanup temporary files
     await cleanupTempFiles(appConfig);
-    
+
     // Archive results if configured
     await archiveResults(appConfig);
-    
+
     // Send notifications if configured
     await sendNotifications(appConfig, result);
-    
+
     console.log('✅ Global Teardown completed successfully');
     console.log(`📊 Final reports available at: ${appConfig.reporting.outputPath}`);
-    
+
   } catch (error) {
     console.error('❌ Global Teardown failed:', error);
     // Don't throw error - teardown failures shouldn't affect test results
@@ -42,11 +42,11 @@ async function globalTeardown(config: FullConfig, result: FullResult): Promise<v
  */
 async function updatePerformanceTracking(result: FullResult): Promise<void> {
   console.log('📊 Updating performance tracking...');
-  
+
   const trackingFile = path.join('test-results', 'performance-tracking.json');
-  
+
   try {
-        const testResults = await getTestResultsFromArtifacts();
+    const testResults = await getTestResultsFromArtifacts();
 
     const trackingData = {
       endTime: new Date().toISOString(),
@@ -62,10 +62,10 @@ async function updatePerformanceTracking(result: FullResult): Promise<void> {
         skippedTests: testResults.skipped
       }
     };
-    
+
     await fs.writeFile(trackingFile, JSON.stringify(trackingData, null, 2));
     console.log('  ✅ Performance tracking updated');
-    
+
   } catch (error) {
     console.error('  ❌ Performance tracking update failed:', error);
   }
@@ -76,10 +76,10 @@ async function updatePerformanceTracking(result: FullResult): Promise<void> {
  */
 async function generateFinalSummary(config: ConfigManager, result: FullResult): Promise<void> {
   console.log('📋 Generating final summary...');
-  
+
   const summaryFile = path.join(config.reporting.outputPath, 'test-summary.json');
-  
-   const testResults = await getTestResultsFromArtifacts();
+
+  const testResults = await getTestResultsFromArtifacts();
 
   try {
 
@@ -108,13 +108,13 @@ async function generateFinalSummary(config: ConfigManager, result: FullResult): 
       testExecution: {
         status: result.status,
         duration: result.duration || 0,
-        
+
         // workers: result.workers || 1,
         totalTests: testResults.total,
         passedTests: testResults.passed,
         failedTests: testResults.failed,
         skippedTests: testResults.skipped
-    },
+      },
       performance: {
         thresholds: config.thresholds,
         monitoring: {
@@ -129,13 +129,13 @@ async function generateFinalSummary(config: ConfigManager, result: FullResult): 
         videosCount: await countFiles(path.join(config.reporting.outputPath, 'videos'), '.webm')
       }
     };
-    
+
     await fs.writeFile(summaryFile, JSON.stringify(summary, null, 2));
     console.log('  ✅ Final summary generated');
-    
+
     // Also create a human-readable summary
     await generateHumanReadableSummary(config, summary);
-    
+
   } catch (error) {
     console.error('  ❌ Final summary generation failed:', error);
   }
@@ -146,8 +146,8 @@ async function generateFinalSummary(config: ConfigManager, result: FullResult): 
  */
 async function generateHumanReadableSummary(config: ConfigManager, summary: any): Promise<void> {
   const summaryLines = [
-    '=' .repeat(60),
-    'PERFORMANCE TEST EXECUTION SUMMARY',
+    '='.repeat(60),
+    'Latency test EXECUTION SUMMARY',
     '='.repeat(60),
     '',
     `Test Date: ${new Date(summary.metadata.timestamp).toLocaleString()}`,
@@ -165,7 +165,7 @@ async function generateHumanReadableSummary(config: ConfigManager, summary: any)
     `✅ Passed: ${summary.testExecution.passedTests}`,
     `❌ Failed: ${summary.testExecution.failedTests}`,
     `⏭️ Skipped: ${summary.testExecution.skippedTests}`,
-    `Success Rate: ${summary.testExecution.totalTests > 0 ? 
+    `Success Rate: ${summary.testExecution.totalTests > 0 ?
       Math.round(summary.testExecution.passedTests / summary.testExecution.totalTests * 100) : 0}%`,
     '',
     'CONFIGURATION:',
@@ -186,12 +186,12 @@ async function generateHumanReadableSummary(config: ConfigManager, summary: any)
     '',
     '='.repeat(60)
   ];
-  
+
   const summaryText = summaryLines.join('\n');
   const summaryTextFile = path.join(config.reporting.outputPath, 'SUMMARY.txt');
-  
+
   await fs.writeFile(summaryTextFile, summaryText);
-  
+
   // Also log to console
   console.log('\n' + summaryText);
 }
@@ -202,9 +202,9 @@ async function generateHumanReadableSummary(config: ConfigManager, summary: any)
 async function getGeneratedReports(outputPath: string): Promise<string[]> {
   try {
     const files = await fs.readdir(outputPath);
-    return files.filter(file => 
-      file.endsWith('.html') || 
-      file.endsWith('.json') || 
+    return files.filter(file =>
+      file.endsWith('.html') ||
+      file.endsWith('.json') ||
       file.endsWith('.csv')
     );
   } catch {
@@ -229,13 +229,13 @@ async function countFiles(directory: string, extension: string): Promise<number>
  */
 async function cleanupTempFiles(config: ConfigManager): Promise<void> {
   console.log('🧹 Cleaning up temporary files...');
-  
+
   const tempDirectories = [
     'temp',
     '.temp',
     'tmp'
   ];
-  
+
   for (const dir of tempDirectories) {
     try {
       await fs.rmdir(dir, { recursive: true });
@@ -252,7 +252,7 @@ async function cleanupTempFiles(config: ConfigManager): Promise<void> {
 async function archiveResults(config: ConfigManager): Promise<void> {
   // This could be extended to create ZIP archives, upload to cloud storage, etc.
   console.log('📦 Archiving results...');
-  
+
   try {
     // Create archive timestamp
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -262,12 +262,12 @@ async function archiveResults(config: ConfigManager): Promise<void> {
       applications: [config.app1.name, config.app2.name],
       totalIterations: config.test.iterations * 2
     };
-    
+
     const archiveInfoFile = path.join(config.reporting.outputPath, 'archive-info.json');
     await fs.writeFile(archiveInfoFile, JSON.stringify(archiveInfo, null, 2));
-    
+
     console.log('  ✅ Archive information created');
-    
+
   } catch (error) {
     console.error('  ❌ Archiving failed:', error);
   }
@@ -278,17 +278,17 @@ async function archiveResults(config: ConfigManager): Promise<void> {
  */
 async function sendNotifications(config: ConfigManager, result: FullResult): Promise<void> {
   console.log('📧 Checking notification configuration...');
-  
+
   // Check for Slack webhook
   if (process.env.SLACK_WEBHOOK_URL) {
     await sendSlackNotification(config, result);
   }
-  
+
   // Check for email recipients
   if (process.env.EMAIL_RECIPIENTS) {
     console.log('  ℹ️  Email notification configured but not implemented');
   }
-  
+
   if (!process.env.SLACK_WEBHOOK_URL && !process.env.EMAIL_RECIPIENTS) {
     console.log('  ℹ️  No notification channels configured');
   }
@@ -299,19 +299,19 @@ async function sendNotifications(config: ConfigManager, result: FullResult): Pro
  */
 async function sendSlackNotification(config: ConfigManager, result: FullResult): Promise<void> {
   try {
-       const testResults = await getTestResultsFromArtifacts();
+    const testResults = await getTestResultsFromArtifacts();
 
     const webhookUrl = process.env.SLACK_WEBHOOK_URL!;
-    
+
     const passedTests = testResults.expected;
     const totalTests = testResults.total;
     const successRate = totalTests > 0 ? Math.round(passedTests / totalTests * 100) : 0;
-    
+
     const status = result.status === 'passed' ? '✅' : '❌';
     const statusColor = result.status === 'passed' ? 'good' : 'danger';
-    
+
     const message = {
-      text: `Performance Test Results - ${config.test.environment.toUpperCase()}`,
+      text: `Latency test Results - ${config.test.environment.toUpperCase()}`,
       attachments: [{
         color: statusColor,
         fields: [
@@ -341,11 +341,11 @@ async function sendSlackNotification(config: ConfigManager, result: FullResult):
             short: false
           }
         ],
-        footer: 'Performance Testing Automation',
+        footer: 'Latency testing Automation',
         ts: Math.floor(Date.now() / 1000)
       }]
     };
-    
+
     const response = await fetch(webhookUrl, {
       method: 'POST',
       headers: {
@@ -353,13 +353,13 @@ async function sendSlackNotification(config: ConfigManager, result: FullResult):
       },
       body: JSON.stringify(message)
     });
-    
+
     if (response.ok) {
       console.log('  ✅ Slack notification sent');
     } else {
       console.error(`  ❌ Slack notification failed: ${response.status}`);
     }
-    
+
   } catch (error) {
     console.error('  ❌ Slack notification error:', error);
   }
@@ -373,7 +373,7 @@ async function getTestResultsFromArtifacts() {
     const resultsPath = path.join('test-results', 'results.json');
     const data = await fs.readFile(resultsPath, 'utf-8');
     const results = JSON.parse(data);
-    
+
     return {
       total: results.length,
       passed: results.filter((r: any) => r.status === 'passed').length,

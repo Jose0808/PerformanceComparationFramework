@@ -644,7 +644,7 @@ export abstract class BasePage {
   }
 
   /**
-   * Enable network throttling for performance testing
+   * Enable network throttling for latency testing
    */
   async enableNetworkThrottling(): Promise<void> {
     const cdp = await this.page.context().newCDPSession(this.page);

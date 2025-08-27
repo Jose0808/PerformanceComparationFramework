@@ -1,5 +1,6 @@
 import { Page } from '@playwright/test';
 import { ConfigManager } from '../config/ConfigManager';
+import { duration } from 'zod/v4/classic/iso.cjs';
 
 export interface PerformanceMetrics {
   // Navigation Timing
@@ -37,6 +38,9 @@ export interface PerformanceMetrics {
   // Memory and CPU
   memoryUsage?: number;
   
+  //Network
+  networkLogs: any[];
+
   // Errors
   jsErrors: string[];
   consoleErrors: string[];
@@ -90,7 +94,8 @@ export class MetricsCollector {
           url: response.url(),
           status: response.status(),
           headers: response.headers(),
-          timestamp: Date.now()
+          timestamp: Date.now(),
+          duration: response.request().timing().responseEnd,
         });
       });
     }
@@ -320,6 +325,7 @@ export class MetricsCollector {
       customMetrics: { ...this.customMetrics },
       jsErrors: [...this.jsErrors],
       consoleErrors: this.consoleLogs.filter(log => log.includes('[error]')),
+      networkLogs: this.networkLogs,
       
       // Merge collected metrics
       ...webVitals,

@@ -1,9 +1,10 @@
 import { Reporter, TestCase, TestResult, FullResult, Suite } from '@playwright/test/reporter';
 import { ComparisonResult } from '../utils/PerformanceComparator';
-import { PerformanceMetrics } from '../metrics/MetricsCollector';
+import { MetricsCollector, PerformanceMetrics } from '../metrics/MetricsCollector';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { ConfigManager } from '../config/ConfigManager';
+import { networkInterfaces } from 'os';
 
 interface TestData {
   appName: string;
@@ -11,6 +12,7 @@ interface TestData {
   duration: number;
   status: string;
   error?: string;
+  networkLogs?: any[];
 }
 
 export default class PerformanceReporter implements Reporter {
@@ -31,7 +33,7 @@ export default class PerformanceReporter implements Reporter {
   onTestEnd(test: TestCase, result: TestResult) {
     // Extract performance data from test annotations
     const performanceData = test.annotations.find(a => a.type === 'performance-data');
-    
+
     if (performanceData && performanceData.description) {
       try {
         const data = JSON.parse(performanceData.description);
@@ -42,6 +44,7 @@ export default class PerformanceReporter implements Reporter {
           status: result.status,
           error: result.error?.message
         });
+
       } catch (error) {
         console.error('Error parsing performance data:', error);
       }
@@ -50,7 +53,7 @@ export default class PerformanceReporter implements Reporter {
 
   async onEnd(result: FullResult) {
     console.log(`🏁 Test execution completed. Status: ${result.status}`);
-    
+
     if (this.testResults.length === 0) {
       console.log('❌ No performance data collected');
       return;
@@ -66,7 +69,7 @@ export default class PerformanceReporter implements Reporter {
 
       // Group results by app
       const groupedResults = this.groupResultsByApp();
-      
+
       // Generate individual app reports
       await this.generateAppReports(groupedResults);
 
@@ -82,7 +85,7 @@ export default class PerformanceReporter implements Reporter {
       await this.generateSummaryDashboard(groupedResults);
 
       console.log('📊 Performance reports generated successfully!');
-      
+
     } catch (error) {
       console.error('❌ Error generating reports:', error);
     }
@@ -90,7 +93,7 @@ export default class PerformanceReporter implements Reporter {
 
   private groupResultsByApp(): Record<string, TestData[]> {
     const grouped: Record<string, TestData[]> = {};
-    
+
     for (const result of this.testResults) {
       if (!grouped[result.appName]) {
         grouped[result.appName] = [];
@@ -106,7 +109,7 @@ export default class PerformanceReporter implements Reporter {
       const report = this.createAppReport(appName, results);
       const fileName = `${appName.replace(/\s+/g, '_').toLowerCase()}_report.html`;
       const filePath = path.join(this.outputDir, fileName);
-      
+
       await fs.writeFile(filePath, report);
       console.log(`📄 Generated report for ${appName}: ${filePath}`);
     }
@@ -267,7 +270,7 @@ export default class PerformanceReporter implements Reporter {
             <td>${result.metrics.lcp?.toFixed(0) || 'N/A'}ms</td>
             <td>${result.metrics.fcp?.toFixed(0) || 'N/A'}ms</td>
             <td>${result.metrics.jsErrors.length}</td>
-            <td>${result.error || '-'}</td>
+            <td>${result.error || '-'}</td> 
         </tr>
     `).join('');
 
@@ -280,7 +283,7 @@ export default class PerformanceReporter implements Reporter {
                     <th>Duration</th>
                     <th>Login Time</th>
                     <th>LCP</th>
-                    <th>FCP</th>x
+                    <th>FCP</th>
                     <th>JS Errors</th>
                     <th>Error Message</th>
                 </tr>
@@ -332,7 +335,7 @@ export default class PerformanceReporter implements Reporter {
 
   private calculateAverageMetrics(results: TestData[]): Record<string, number> {
     const avgMetrics: Record<string, number> = {};
-    
+
     if (results.length === 0) return avgMetrics;
 
     const metricSums: Record<string, number> = {};
@@ -353,7 +356,7 @@ export default class PerformanceReporter implements Reporter {
           metricSums[key] = (metricSums[key] || 0) + value;
           metricCounts[key] = (metricCounts[key] || 0) + 1;
         }
-      }
+      }      
     }
 
     // Calculate averages
@@ -372,7 +375,7 @@ export default class PerformanceReporter implements Reporter {
 
     const comparisonHtml = this.createComparisonReport(app1Avg, app2Avg);
     const filePath = path.join(this.outputDir, 'comparison_report.html');
-    
+
     await fs.writeFile(filePath, comparisonHtml);
     console.log(`📊 Generated comparison report: ${filePath}`);
   }
@@ -402,7 +405,7 @@ export default class PerformanceReporter implements Reporter {
 <body>
     <div class="container">
         <div class="header">
-            <h1>Performance Comparison Report</h1>
+            <h1>Reporte de comparación</h1>
             <h2>${this.config.app1.name} vs ${this.config.app2.name}</h2>
             <p>Generated on ${new Date().toLocaleString()}</p>
         </div>
@@ -410,17 +413,17 @@ export default class PerformanceReporter implements Reporter {
         <table class="comparison-table">
             <thead>
                 <tr>
-                    <th>Metric</th>
+                    <th>Metrica</th>
                     <th>${this.config.app1.name}</th>
                     <th>${this.config.app2.name}</th>
-                    <th>Difference</th>
-                    <th>Winner</th>
+                    <th>Diferencia</th>
+                    <th>Ganador</th>
                 </tr>
             </thead>
             <tbody>
                 ${comparisons}
             </tbody>
-        </table>
+        </table>        
     </div>
 </body>
 </html>`;
@@ -433,7 +436,7 @@ export default class PerformanceReporter implements Reporter {
     for (const metric of metrics) {
       const app1Value = app1Metrics[metric] || 0;
       const app2Value = app2Metrics[metric] || 0;
-      
+
       if (app1Value === 0 && app2Value === 0) continue;
 
       const difference = ((app2Value - app1Value) / app1Value * 100).toFixed(1);
@@ -466,12 +469,10 @@ export default class PerformanceReporter implements Reporter {
 
   private isLowerBetter(metric: string): boolean {
     const lowerBetterMetrics = [
-      'lcp', 'fid', 'cls', 'ttfb', 'fcp', 'totalLoadTime', 'domLoadTime', 
-      'networkTime', 'jsLoadTime', 'cssLoadTime', 'imageLoadTime', 
-      'total_login_time', 'login_page_navigation_time', 'username_fill_time',
-      'password_fill_time', 'login_button_click_time', 'memoryUsage'
+      'lcp', 'fid', 'cls', 'ttfb', 'fcp', 'totalLoadTime', 'domLoadTime',
+      'networkTime', 'jsLoadTime', 'cssLoadTime', 'imageLoadTime', 'memoryUsage'
     ];
-    
+
     return lowerBetterMetrics.includes(metric);
   }
 
@@ -482,7 +483,7 @@ export default class PerformanceReporter implements Reporter {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Performance Test Dashboard</title>
+    <title>Latencytest Dashboard</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -569,7 +570,7 @@ export default class PerformanceReporter implements Reporter {
 <body>
     <div class="container">
         <div class="header">
-            <h1>🚀 Performance Test Dashboard</h1>
+            <h1>🚀 Latencytest Dashboard</h1>
             <p>Application Performance Comparison Results</p>
             <p>${new Date().toLocaleString()}</p>
         </div>
@@ -620,7 +621,7 @@ export default class PerformanceReporter implements Reporter {
     return Object.entries(groupedResults).map(([appName, results]) => {
       const successfulRuns = results.filter(r => r.status === 'passed');
       const avgMetrics = this.calculateAverageMetrics(successfulRuns);
-      
+
       return `
         <div class="app-card">
           <h3 class="app-title">${appName}</h3>

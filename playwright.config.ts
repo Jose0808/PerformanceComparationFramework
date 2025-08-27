@@ -30,14 +30,14 @@ const {
   // Output & Reporting
   OUTPUT_PATH = './reports',
   GENERATE_SCREENSHOTS = 'true',
-  GENERATE_VIDEO_RECORDING = 'false',
+  GENERATE_VIDEO_RECORDING = 'true',
   GENERATE_TRACE_FILES = 'true',
   REPORT_FORMAT = 'html,json',
 
   // Environment
   ENVIRONMENT = 'pre',
   NETWORK_CONDITIONS = '4g',
-  PARALLEL_INSTANCES = '1',
+  PARALLEL_INSTANCES = '2',
   ITERATIONS = '3',
 
   // Logging

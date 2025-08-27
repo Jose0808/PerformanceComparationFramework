@@ -256,7 +256,7 @@ REGRESSION_THRESHOLD_PERCENTAGE=10  # Acceptable regression %
 ### GitHub Actions Example
 
 ```yaml
-name: Performance Tests
+name: Latency tests
 on: [push, pull_request]
 
 jobs:
@@ -380,4 +380,4 @@ MIT License - see LICENSE file for details
 
 ---
 
-**Happy Performance Testing! 🚀📊**
+**Happy Latency testing! 🚀📊**
