@@ -2,19 +2,15 @@ import { Page, Locator, FrameLocator } from '@playwright/test';
 import { BasePage } from './base.page';
 import { AppConfig } from '../config/ConfigManager';
 import { ICambioDeNumero } from '../types/cambioDeNumero';
-import { FrameOptionsByRole } from '../types/frameOptions';
+import { TestTimer } from '../utils/timer.utils';
 
 
 export class BasicInfo extends BasePage {
     [x: string]: any;
     // Generic selectors that should work for most login forms
-
     private readonly currentFrame = "div:nth-child(4) > iframe";
-
     private readonly suscriptions = "Suscripciones";
     private readonly suscriptionsWait = ".next";
-
-    private readonly rowSuscription: FrameOptionsByRole = { role: "row", options: { name: "Vista 360° Individual" } };;
 
     constructor(page: Page) {
         super(page);
@@ -23,36 +19,30 @@ export class BasicInfo extends BasePage {
     /**
      * Busqueda de clientes
      */
-    async selectSuscription(suscriptionRow: ICambioDeNumero["SuscriptionRow"], menuSuscription: string): Promise<void> {
-        const StartTime = Date.now();
+    async selectSuscription(appConfig: AppConfig, timer: TestTimer, suscriptionRow: ICambioDeNumero["SuscriptionRow"], menuSuscription: string): Promise<void> {
         console.log(`Starting select suscription`);
-
         try {
+            timer.startStep(appConfig.name, 'Informacion Básica');
+
+            timer.startSubStep('Espera cargue pantalla: Informacion Básica - Suscripciones');
             const frameSelector = await this.page.locator(this.currentFrame).contentFrame();
-            await frameSelector.getByText(this.suscriptions).waitFor({
-                state: 'visible',
-                timeout: this.config.test.timeout
-            });
+            await this.waitForElementLocator(frameSelector.getByText(this.suscriptions), "Espera menú suscripciones");
+            timer.endSubStep();
+            // await frameSelector.getByText(this.suscriptions).waitFor({
+            //     state: 'visible',
+            //     timeout: this.config.test.timeout
+            // });
 
-            await this.selectMenu(frameSelector, this.suscriptions, this.suscriptionsWait);
+            await this.selectMenu(timer, frameSelector, this.suscriptions, this.suscriptionsWait);
 
-            await this.tableSelect(frameSelector, suscriptionRow, menuSuscription);
+            await this.tableSelect(timer, frameSelector, suscriptionRow, menuSuscription);
 
+            timer.endStep();
 
-            const EndTime = Date.now();
-            const totalTime = EndTime - StartTime;
-
-            await this.metricsCollector.recordCustomMetric('total_search_customer_time', totalTime);
-            console.log(`✅ Search customer completed successfully in ${totalTime}ms`);
-
-            // Collect final performance metrics
-            await this.collectPerformanceMetrics();
+            console.log(`✅ Search customer completed successfully`);
 
         } catch (error) {
-            const EndTime = Date.now();
-            const totalTime = EndTime - StartTime;
-            await this.metricsCollector.recordCustomMetric('failed_search_customer_time', totalTime);
-            console.error(`❌ Search customer failed for after ${totalTime}ms:`, error);
+            console.error(`❌ Search customer failed`, error);
 
             throw error;
         }
@@ -61,65 +51,28 @@ export class BasicInfo extends BasePage {
     /**
      * Select option top menu
      */
-    async selectMenu(frame: FrameLocator, elementClick: string, elementWait: string): Promise<void> {
+    async selectMenu(timer: TestTimer, frame: FrameLocator, elementClick: string, elementWait: string): Promise<void> {
         const StartTime = Date.now();
         console.log(`Starting select menu`);
 
         try {
+
+            timer.startSubStep('Click menú: ' + elementClick);
             await frame.getByText(elementClick).click();
-            await frame.locator(elementWait).waitFor({
-                state: 'visible',
-                timeout: this.config.test.timeout
-            });
+            timer.endSubStep();
 
-            const EndTime = Date.now();
-            const totalTime = EndTime - StartTime;
+            timer.startSubStep('Espera cargue tabla - Suscripciones');
+            await this.waitForElementLocator(frame.locator(elementWait), "Espera menú superior información basica" + elementWait);
+            timer.endSubStep();
 
-            await this.metricsCollector.recordCustomMetric('total_select_menu_time', totalTime);
-            console.log(`✅ Select menu completed successfully in ${totalTime}ms`);
-
-            // Collect final performance metrics
-            await this.collectPerformanceMetrics();
+            // await frame.locator(elementWait).waitFor({
+            //     state: 'visible',
+            //     timeout: this.config.test.timeout
+            // });
+            console.log(`✅ Select menu completed successfully`);
 
         } catch (error) {
-            const EndTime = Date.now();
-            const totalTime = EndTime - StartTime;
-            await this.metricsCollector.recordCustomMetric('failed_select_menu_time', totalTime);
-            console.error(`❌ Select Menu failed for after ${totalTime}ms:`, error);
-
-            throw error;
-        }
-    }
-
-
-    /**
-     * Select option top menu
-     */
-    async selectMenuBottom(frame: FrameLocator, elementClick: string, elementWait: string): Promise<void> {
-        const StartTime = Date.now();
-        console.log(`Starting select menu`);
-
-        try {
-            await frame.getByText(elementClick).click();
-            await frame.getByText(elementWait).waitFor({
-                state: 'visible',
-                timeout: this.config.test.timeout
-            });
-
-            const EndTime = Date.now();
-            const totalTime = EndTime - StartTime;
-
-            await this.metricsCollector.recordCustomMetric('total_select_menu_time', totalTime);
-            console.log(`✅ Select menu completed successfully in ${totalTime}ms`);
-
-            // Collect final performance metrics
-            await this.collectPerformanceMetrics();
-
-        } catch (error) {
-            const EndTime = Date.now();
-            const totalTime = EndTime - StartTime;
-            await this.metricsCollector.recordCustomMetric('failed_select_menu_time', totalTime);
-            console.error(`❌ Select Menu failed for after ${totalTime}ms:`, error);
+            console.error(`❌ Select Menu failed`, error);
 
             throw error;
         }
@@ -128,37 +81,30 @@ export class BasicInfo extends BasePage {
     /**
      * Select option top menu
      */
-    async tableSelect(frame: FrameLocator, suscriptionRow: ICambioDeNumero["SuscriptionRow"], menuSuscription: string): Promise<void> {
-        const StartTime = Date.now();
+    async tableSelect(timer: TestTimer, frame: FrameLocator, suscriptionRow: ICambioDeNumero["SuscriptionRow"], menuSuscription: string): Promise<void> {
         console.log(`Starting table select`);
 
         try {
 
-            await this.findRow(frame, suscriptionRow);
+            await this.findRow(timer, frame, suscriptionRow);
 
+            timer.startSubStep('Espera de menú: ' + menuSuscription);
             const changeNumber = await frame.getByText(menuSuscription, { exact: true })
             await changeNumber.waitFor({
                 state: 'visible',
                 timeout: this.config.test.timeout
             });
+            timer.endSubStep();
+            timer.startSubStep('Scroll al menú: ' + menuSuscription);
             await changeNumber.scrollIntoViewIfNeeded();
+            timer.endSubStep();
+            timer.startSubStep('Click menú: ' + menuSuscription);
             await changeNumber.click();
-
-            const EndTime = Date.now();
-            const totalTime = EndTime - StartTime;
-
-            await this.metricsCollector.recordCustomMetric('total_table_select_time', totalTime);
-            console.log(`✅ Table select completed successfully in ${totalTime}ms`);
-
-            // Collect final performance metrics
-            await this.collectPerformanceMetrics();
-
+            timer.endSubStep();
+            
+            console.log(`✅ Table select completed successfully`);
         } catch (error) {
-            const EndTime = Date.now();
-            const totalTime = EndTime - StartTime;
-            await this.metricsCollector.recordCustomMetric('failed_table_select_time', totalTime);
-            console.error(`❌ Table select failed for after ${totalTime}ms:`, error);
-
+            console.error(`❌ Table select failed`, error);
             throw error;
         }
     }
@@ -167,29 +113,32 @@ export class BasicInfo extends BasePage {
     /**
      * Select option top menu
      */
-    async findRow(frame: FrameLocator, suscriptionRow: ICambioDeNumero["SuscriptionRow"]): Promise<void> {
+    async findRow(timer: TestTimer, frame: FrameLocator, suscriptionRow: ICambioDeNumero["SuscriptionRow"]): Promise<void> {
         let currentPage = 1;
         const nextPage = await frame.locator('.next');
         const maxPages = await frame.locator('.uPage').count();
-
-        let count = await frame.locator('.uPage').count();
 
         console.log("max pages:" + maxPages)
         while (currentPage <= maxPages) {
             console.log(`Buscando en página ${currentPage}...`);
             // Buscar en la página actual
-            const found = await this.searchInCurrentPage(frame, suscriptionRow);
+            const found = await this.searchInCurrentPage(timer, frame, suscriptionRow);
 
             if (found) {
                 console.log('Registro encontrado y procesado');
                 break;
             }
 
+            timer.startSubStep('Click siguiente pagina de la tabla, pagina: ' + (currentPage + 1));
             await nextPage.click();
+            timer.endSubStep();
+
+            timer.startSubStep('Espera cargue de la tabla con nueva informacion');
             await frame.locator("#loadingcover").waitFor({
                 state: 'hidden',
                 timeout: this.config.test.timeout
             });
+            timer.endSubStep();
             currentPage++;
         }
     }
@@ -197,14 +146,14 @@ export class BasicInfo extends BasePage {
     /**
      * Select option top menu
      */
-    private async searchInCurrentPage(frame: FrameLocator, suscriptionRow: ICambioDeNumero["SuscriptionRow"]): Promise<boolean> {
+    private async searchInCurrentPage(timer: TestTimer, frame: FrameLocator, suscriptionRow: ICambioDeNumero["SuscriptionRow"]): Promise<boolean> {
         try {
             // Buscar la fila que coincida con los datos            
             const row = frame.getByRole('row', { name: suscriptionRow.PhoneNumber || suscriptionRow.SuscriptorNumber }).getByRole('insertion');
 
             if (await row.count() > 0) {
                 console.log('Registro encontrado en la página actual');
-                await this.processRow(row);
+                await this.processRow(timer, row);
                 return true;
             }
 
@@ -216,10 +165,15 @@ export class BasicInfo extends BasePage {
         }
     }
 
-    private async processRow(row: Locator): Promise<void> {
+    private async processRow(timer: TestTimer, row: Locator): Promise<void> {
         try {
+
+            timer.startSubStep('Click checkbox de la fila');
             await row.click();
+            timer.endSubStep();
+            timer.startSubStep('Click en Tramites de la fila');
             await row.locator("../ancestor::tr").locator(".btn_normal").click();
+            timer.endSubStep();
 
         } catch (error: any) {
             console.log('Error:', error.message);

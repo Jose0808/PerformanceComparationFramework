@@ -5,6 +5,8 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { ConfigManager } from '../config/ConfigManager';
 import { networkInterfaces } from 'os';
+import { ReportGenerator } from '../utils/report.utils';
+import { TestExecution } from '../types/timer.types';
 
 interface TestData {
   appName: string;
@@ -17,6 +19,21 @@ interface TestData {
 
 export default class PerformanceReporter implements Reporter {
   private testResults: TestData[] = [];
+  private TimeResults: TestExecution[] = [];
+  private onPremiseResult: TestExecution = {
+    environment: '',
+    testName: '',
+    totalDuration: 0,
+    steps: [],
+    timestamp: new Date()
+  };
+  private cloudResult: TestExecution = {
+    environment: '',
+    testName: '',
+    totalDuration: 0,
+    steps: [],
+    timestamp: new Date()
+  };
   private config: ConfigManager;
   private outputDir: string;
 
@@ -34,6 +51,15 @@ export default class PerformanceReporter implements Reporter {
     // Extract performance data from test annotations
     const performanceData = test.annotations.find(a => a.type === 'performance-data');
 
+    const res1 = test.annotations.find(a => a.type === 'performance-data-Cloud');
+    const res2 = test.annotations.find(a => a.type === 'performance-data-OnPremise');
+    if (res1 && res1.description) {
+      this.cloudResult = JSON.parse(res1.description).data as TestExecution;
+    }
+    if (res2 && res2.description) {
+      this.onPremiseResult = JSON.parse(res2.description).data as TestExecution;
+    }
+
     if (performanceData && performanceData.description) {
       try {
         const data = JSON.parse(performanceData.description);
@@ -42,7 +68,8 @@ export default class PerformanceReporter implements Reporter {
           metrics: data.metrics,
           duration: result.duration,
           status: result.status,
-          error: result.error?.message
+          error: result.error?.message,
+          networkLogs: data.networkLogs
         });
 
       } catch (error) {
@@ -54,12 +81,21 @@ export default class PerformanceReporter implements Reporter {
   async onEnd(result: FullResult) {
     console.log(`🏁 Test execution completed. Status: ${result.status}`);
 
-    if (this.testResults.length === 0) {
-      console.log('❌ No performance data collected');
-      return;
-    }
+    // if (this.testResults.length === 0) {
+    //   console.log('❌ No performance data collected');
+    //   return;
+    // }
 
-    await this.generateReports();
+    const comparison = ReportGenerator.generateComparison(this.onPremiseResult, this.cloudResult);
+
+    // Mostrar reporte en consola
+    ReportGenerator.generateConsoleReport(comparison);
+
+    // Generar reporte HTML
+    ReportGenerator.generateHTMLReport(comparison);
+
+    // await this.generateReports();
+
   }
 
   private async generateReports() {
@@ -356,7 +392,18 @@ export default class PerformanceReporter implements Reporter {
           metricSums[key] = (metricSums[key] || 0) + value;
           metricCounts[key] = (metricCounts[key] || 0) + 1;
         }
-      }      
+      }
+
+
+      // Process custom metrics
+      result.metrics.networkLogs.forEach(element => {
+        if (element.type === "response") {
+          let partes = element.url.split("/");
+          let key = partes[partes.length - 1];
+          metricSums[key] = (metricSums[key] || 0) + element.duration;
+          metricCounts[key] = (metricCounts[key] || 0) + 1;
+        }
+      });
     }
 
     // Calculate averages
@@ -455,11 +502,11 @@ export default class PerformanceReporter implements Reporter {
 
       rows.push(`
         <tr>
-          <td>${metric}</td>
+          <td class= "metricName">${metric}</td>
           <td class="${winner === this.config.app1.name ? 'winner' : (winner === 'tie' ? 'tie' : 'loser')}">${app1Value.toFixed(1)}</td>
           <td class="${winner === this.config.app2.name ? 'winner' : (winner === 'tie' ? 'tie' : 'loser')}">${app2Value.toFixed(1)}</td>
           <td>${difference}%</td>
-          <td class="${winnerClass}">${winner}</td>
+          <td class="${winnerClass}">${winner === 'tie' ? 'Empate' : winner}</td>
         </tr>
       `);
     }
@@ -564,7 +611,7 @@ export default class PerformanceReporter implements Reporter {
         }
         .success { color: #4ade80; }
         .error { color: #f87171; }
-        .warning { color: #fbbf24; }
+        .warning { color: #fbbf24; }        
     </style>
 </head>
 <body>

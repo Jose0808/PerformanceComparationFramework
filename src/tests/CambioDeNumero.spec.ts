@@ -4,21 +4,27 @@ import { ConfigManager } from '../config/ConfigManager';
 import { MetricsCollector } from '../metrics/MetricsCollector';
 import { PerformanceComparator } from '../utils/PerformanceComparator';
 import { BasePage } from '../pages/base.page';
-import { datacambiodenumero } from '../types/cambioDeNumero'
+import { ICambioDeNumero } from '../types/cambioDeNumero'
 import { DashboardPage } from '../pages/dashboard.page';
 import { Vista360IndividualPage } from '../pages/vista360Individual.page';
 import { BasicInfo } from '../pages/basicInfo.page';
 import { ChangeNumber } from '../pages/changeNumber.page';
 import { Checkout } from '../pages/checkout.page';
+import { TestTimer } from '../utils/timer.utils';
+import { ReportGenerator } from '../utils/report.utils';
+import CambioDeNumero from '../data-driven/CambioDeNumero.json'
 
-test.describe('Latency Comparison - Cambio de Numero Flow', () => {
-  let config: ConfigManager;
-  let performanceComparator: PerformanceComparator;
-  config = ConfigManager.getInstance();
+
+test.describe('Cambio de Numero Flow', () => {
+  let config: ConfigManager = ConfigManager.getInstance();
+  let loginPage: LoginPage;
+  let dashboardPage: DashboardPage;
+  let vista360IndividualPage: Vista360IndividualPage;
+  let basicInfo: BasicInfo;
+  let changeNumber: ChangeNumber;
+  let checkout: Checkout;
 
   test.beforeAll(() => {
-    performanceComparator = new PerformanceComparator();
-
     console.log('🔧 Test Configuration:');
     console.log(`Environment: ${config.test.environment}`);
     console.log(`Iterations: ${config.test.iterations}`);
@@ -29,6 +35,12 @@ test.describe('Latency Comparison - Cambio de Numero Flow', () => {
 
   // Test setup for consistent browser configuration
   test.beforeEach(async ({ page, context }) => {
+    loginPage = new LoginPage(page);
+    dashboardPage = new DashboardPage(page);
+    vista360IndividualPage = new Vista360IndividualPage(page);
+    basicInfo = new BasicInfo(page);
+    changeNumber = new ChangeNumber(page);
+    checkout = new Checkout(page);
     // Apply network throttling if configured
     if (config.network.latency > 0) {
       const cdp = await context.newCDPSession(page);
@@ -51,72 +63,54 @@ test.describe('Latency Comparison - Cambio de Numero Flow', () => {
   // Generate tests for each application dynamically
   for (const app of config.getAllApps()) {
     test.describe(`${app.name} Latency tests`, () => {
-
       // Generate multiple test runs based on iteration count
       for (let iteration = 1; iteration <= config.test.iterations; iteration++) {
         test(`Cambio de Numero Performance - ${app.name} - Run ${iteration}`, async ({ page }) => {
-          const testStartTime = Date.now();
-
           console.log(`\n🚀 Starting ${app.name} - Run ${iteration}`);
           console.log(`URL: ${app.baseUrl}`);
 
-          let loginPage: LoginPage;
-          let dashboardPage: DashboardPage;
-          let vista360IndividualPage: Vista360IndividualPage;
-          let basicInfo: BasicInfo;
-          let changeNumber: ChangeNumber;
-          let checkout: Checkout;
           let metrics: any;
           let testError: string | undefined;
 
           try {
-
-            // Initialize page object
-            const metricsCollector = new MetricsCollector(page);
-            loginPage = new LoginPage(page);
-            dashboardPage = new DashboardPage(page);
-            vista360IndividualPage = new Vista360IndividualPage(page);
-            basicInfo = new BasicInfo(page);
-            changeNumber = new ChangeNumber(page);
-            checkout = new Checkout(page);
-
             // Enable network throttling
             await loginPage.enableNetworkThrottling();
 
-            // Execute login flow with performance tracking
-            const StartTime = Date.now();
-
-            await loginPage.login(app);
+            let timer = new TestTimer();
+            const datacambiodenumero = CambioDeNumero as unknown as ICambioDeNumero;
+            await loginPage.login(app, timer);
             const menu = "Operación Integrada (Nuevo)";
             const subMenu = "Vista 360° Individual";
-            await dashboardPage.selectLeftMenu(menu);
-            await dashboardPage.selectMenuMapSite(menu, subMenu);
-            await vista360IndividualPage.searchCustomer(datacambiodenumero.filters);
+            await dashboardPage.selectOnDashboard(app, timer, menu, subMenu);
+            await vista360IndividualPage.searchCustomer(app, timer, datacambiodenumero.filters);
             const menuSuscription = "Cambio de número";
-            await basicInfo.selectSuscription(datacambiodenumero.SuscriptionRow, menuSuscription);
-            await changeNumber.changeNumber();
-            await checkout.checkoutValidate();
+            await basicInfo.selectSuscription(app, timer, datacambiodenumero.SuscriptionRow, menuSuscription);
+            await changeNumber.changeNumber(app, timer);
+            // await checkout.checkoutValidate(app,timer);
 
+            let data = timer.getExecution(app.name, 'Proceso completo de cambio de número');
 
-            const EndTime = Date.now();
+            test.info().annotations.push({
+              type: 'performance-data-' + app.name,
+              description: JSON.stringify({
+                data
+              })
+            });
 
             // Collect performance metrics
-            metrics = await loginPage.collectPerformanceMetrics();
-
-            // Add test execution time
-            metrics.customMetrics.test_execution_time = EndTime - StartTime;
-            metrics.customMetrics.total_test_time = Date.now() - testStartTime;
+            metrics = await dashboardPage.collectPerformanceMetrics();
 
             console.log(`✅ ${app.name} - Run ${iteration} completed successfully`);
             console.log(`🏃 Cambio de número time: ${metrics.customMetrics.total_login_time}ms`);
             console.log(`📊 LCP: ${metrics.lcp}ms, FCP: ${metrics.fcp}ms, TTFB: ${metrics.ttfb}ms`);
 
             // Validate against thresholds
+            const metricsCollector = new MetricsCollector(page);
             const thresholdCheck = metricsCollector.checkThresholds(metrics);
 
             if (!thresholdCheck.passed) {
               console.warn(`⚠️  Threshold violations detected:`);
-              thresholdCheck.failures.forEach(failure => console.warn(`  - ${failure}`));
+              thresholdCheck.failures.forEach((failure: any) => console.warn(`  - ${failure}`));
             }
 
             // Take screenshot for successful run if configured
@@ -159,55 +153,4 @@ test.describe('Latency Comparison - Cambio de Numero Flow', () => {
       }
     });
   }
-
-  // Summary test that runs after all individual tests
-  test.describe('Performance Analysis', () => {
-    test('Generate Performance Comparison Report', async () => {
-
-      console.log('\n📊 Generating performance comparison report...');
-
-      // This test will be executed after all individual tests
-      // The actual comparison and report generation is handled by the custom reporter
-      // This test serves as a placeholder and summary point
-
-      console.log('✅ Latency testing completed');
-      console.log(`📁 Reports available at: ${config.reporting.outputPath}`);
-
-      // Add summary information
-      test.info().annotations.push({
-        type: 'test-summary',
-        description: JSON.stringify({
-          totalApps: config.getAllApps().length,
-          iterationsPerApp: config.test.iterations,
-          environment: config.test.environment,
-          networkConditions: config.test.networkConditions,
-          timestamp: new Date().toISOString()
-        })
-      });
-    });
-  });
 });
-
-/**
- * Parametrized test generator for parallel execution
- */
-function generateParametrizedTests() {
-  const config = ConfigManager.getInstance();
-  const testCases = [];
-
-  for (const app of config.getAllApps()) {
-    for (let iteration = 1; iteration <= config.test.iterations; iteration++) {
-      testCases.push({
-        appName: app.name,
-        appConfig: app,
-        iteration: iteration,
-        testId: `${app.name}_iteration_${iteration}`.replace(/\s+/g, '_').toLowerCase()
-      });
-    }
-  }
-
-  return testCases;
-}
-
-// Export test cases for potential use in custom runners
-export { generateParametrizedTests };

@@ -1,7 +1,8 @@
 import { Page, Locator } from '@playwright/test';
 import { BasePage } from './base.page';
 import { AppConfig } from '../config/ConfigManager';
-import { ICambioDeNumero } from '../types/CambioDeNumero';
+import { ICambioDeNumero } from '../types/cambioDeNumero';
+import { TestTimer } from '../utils/timer.utils';
 
 
 export class Vista360IndividualPage extends BasePage {
@@ -11,7 +12,7 @@ export class Vista360IndividualPage extends BasePage {
     private readonly currentFrame = "div:nth-child(4) > iframe";
     private readonly searchCustomerText = "Búsqueda de clientes";
     // private readonly serviceNo: FrameOptions = { frame: this.currentFrame, selector: "#serviceNO" };
-    private readonly serviceNo = "#serviceNO" ;
+    private readonly serviceNo = "#serviceNO";
     private readonly idNumber = "#idNumber" //{ frame: this.currentFrame, selector: "#idNumber" };
     private readonly accountCode = "#accountCode";
     private readonly idType = "#ocTriggeridTypeDroplistSelectudrop00001";
@@ -26,52 +27,70 @@ export class Vista360IndividualPage extends BasePage {
     /**
      * Busqueda de clientes
      */
-    async searchCustomer(filters: ICambioDeNumero["filters"]): Promise<void> {
-        const StartTime = Date.now();
+    async searchCustomer(appConfig: AppConfig, timer: TestTimer, filters: ICambioDeNumero["filters"]): Promise<void> {
         console.log(`Starting search customer`);
 
         try {
-            //set filters
-            // if (filters.serviceNo) this.fillInput(this.serviceNo, filters.serviceNo, "No. de servicio:");
-            // if (filters.idNumber) this.fillInput(this.idNumber, filters.idNumber, "No de identificación:");
-            // if (filters.accountCode) this.fillInput(this.accountCode, filters.accountCode, "Código de cuenta:");
-            // if (filters.idType) this.fillDropdownLabel(this.idType, filters.idType, "Tipo de documento:");
-            // if (filters.Historic) this.setCheckbox(this.Historic, filters.Historic);
-            // if (filters.imei) this.fillInput(this.imei, filters.imei, "Imei:");
 
-            if (!filters.idNumber || !filters.idType) return;
-
+            timer.startStep(appConfig.name, 'Buscar cliente');
+            timer.startSubStep('Espera de pantalla: Búsqueda de clientes');
             const frameSelector = await this.page.locator(this.currentFrame).contentFrame();
-            await frameSelector.getByText(this.searchCustomerText).waitFor({
-                state: 'visible',
-                timeout: this.config.test.timeout
-            });
-            await frameSelector.locator(this.idType).click();
-            const dropdown = await frameSelector.getByText(filters.idType);
-            await dropdown.waitFor({
-                state: 'visible',
-                timeout: this.config.test.timeout
-            });
-            await dropdown.click();
-            await frameSelector.locator(this.idNumber).fill(filters.idNumber);
+            await this.waitForElementLocator(frameSelector.getByText(this.searchCustomerText), "Pantalla Busqueda de clientes");
+            timer.endSubStep();
 
-            await frameSelector.locator(this.search).click();
+            // await frameSelector.getByText(this.searchCustomerText).waitFor({
+            //     state: 'visible',
+            //     timeout: this.config.test.timeout
+            // });
 
-            const EndTime = Date.now();
-            const totalTime = EndTime - StartTime;
+            //set filters
+            if (filters.idType) {
 
-            await this.metricsCollector.recordCustomMetric('total_search_customer_time', totalTime);
-            console.log(`✅ Search customer completed successfully in ${totalTime}ms`);
+                timer.startSubStep('Seleccionar tipo de identificación: ' + filters.idType);
+                await frameSelector.locator(this.idType).click();
+                const dropdown = await frameSelector.getByText(filters.idType);
+                await dropdown.waitFor({
+                    state: 'visible',
+                    timeout: this.config.test.timeout
+                });
+                await dropdown.click();
+                timer.endSubStep();
 
-            // Collect final performance metrics
-            await this.collectPerformanceMetrics();
+            }
 
+            if (filters.idNumber) {
+                timer.startSubStep('Digitar identificación: ' + filters.idNumber);
+                this.fillInput(this.idNumber, filters.idNumber, frameSelector);
+                timer.endSubStep();
+            }
+
+            if (filters.serviceNo) {
+                timer.startSubStep('Digitar número de servicio: ' + filters.serviceNo);
+                this.fillInput(this.serviceNo, filters.serviceNo, frameSelector);
+                timer.endSubStep();
+            }
+            if (filters.accountCode) {
+                timer.startSubStep('Digitar codigo de cuenta: ' + filters.accountCode);
+                this.fillInput(this.accountCode, filters.accountCode, frameSelector);
+                timer.endSubStep();
+            }
+            if (filters.Historic) {
+                timer.startSubStep('Ckeckear historico: ' + filters.Historic);
+                this.setCheckbox(this.Historic, filters.Historic, frameSelector);
+                timer.endSubStep();
+            }
+            if (filters.imei) {
+                timer.startSubStep('Digitar imei: ' + filters.imei);
+                this.fillInput(this.imei, filters.imei, frameSelector);
+                timer.endSubStep();
+            }
+            timer.startSubStep('Click en buscar');
+            await this.clickElement(this.search, undefined, frameSelector);
+            timer.endSubStep();
+            timer.endStep();
+            console.log(`✅ Search customer completed successfully`);
         } catch (error) {
-            const EndTime = Date.now();
-            const totalTime = EndTime - StartTime;
-            await this.metricsCollector.recordCustomMetric('failed_search_customer_time', totalTime);
-            console.error(`❌ Search customer failed for after ${totalTime}ms:`, error);
-
+            console.error(`❌ Search customer failed`, error);
             throw error;
         }
     }

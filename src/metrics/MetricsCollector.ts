@@ -1,13 +1,31 @@
 import { Page } from '@playwright/test';
 import { ConfigManager } from '../config/ConfigManager';
-import { duration } from 'zod/v4/classic/iso.cjs';
+
+export interface NetworkRequest {
+  type: 'request';
+  url: string;
+  method: string;
+  headers: Record<string, string>;
+  timestamp: number;
+}
+
+export interface NetworkResponse {
+  type: 'response';
+  url: string;
+  method: string;
+  status: number;
+  duration: number;
+}
+
+export type NetworkLog = NetworkRequest | NetworkResponse;
+
 
 export interface PerformanceMetrics {
   // Navigation Timing
   navigationStart: number;
   loadEventEnd: number;
   domContentLoadedEventEnd: number;
-  
+
   // Core Web Vitals
   lcp: number;
   fid: number;
@@ -15,31 +33,31 @@ export interface PerformanceMetrics {
   ttfb: number;
   fcp: number;
   inp?: number;
-  
+
   // Custom Timing
   totalLoadTime: number;
   domLoadTime: number;
   networkTime: number;
-  
+
   // Resource Loading
   jsLoadTime: number;
   cssLoadTime: number;
   imageLoadTime: number;
   fontLoadTime: number;
-  
+
   // Network Metrics
   requestCount: number;
   transferSize: number;
   resourceSize: number;
-  
+
   // Custom Application Metrics
   customMetrics: Record<string, number>;
-  
+
   // Memory and CPU
   memoryUsage?: number;
-  
+
   //Network
-  networkLogs: any[];
+  networkLogs: NetworkLog[];
 
   // Errors
   jsErrors: string[];
@@ -51,7 +69,7 @@ export class MetricsCollector {
   private readonly config: ConfigManager;
   private customMetrics: Record<string, number> = {};
   private consoleLogs: string[] = [];
-  private networkLogs: any[] = [];
+  private networkLogs: NetworkLog[] = [];
   private jsErrors: string[] = [];
 
   constructor(page: Page) {
@@ -69,7 +87,7 @@ export class MetricsCollector {
       this.page.on('console', (msg) => {
         const logEntry = `[${msg.type()}] ${msg.text()}`;
         this.consoleLogs.push(logEntry);
-        
+
         if (msg.type() === 'error') {
           this.jsErrors.push(logEntry);
         }
@@ -78,7 +96,11 @@ export class MetricsCollector {
 
     // Network monitoring
     if (this.config.monitoring.captureNetworkLogs) {
+      const requestTimes = new Map<string, number>();
+
       this.page.on('request', (request) => {
+        requestTimes.set(request.url(), Date.now());
+
         this.networkLogs.push({
           type: 'request',
           url: request.url(),
@@ -89,15 +111,23 @@ export class MetricsCollector {
       });
 
       this.page.on('response', (response) => {
+        const startTime = requestTimes.get(response.url());
+        const endTime = Date.now();
+        const duration = startTime ? endTime - startTime : 0;
+
+        const request = response.request();
         this.networkLogs.push({
           type: 'response',
           url: response.url(),
+          method: request.method(),
           status: response.status(),
-          headers: response.headers(),
-          timestamp: Date.now(),
-          duration: response.request().timing().responseEnd,
+          duration: duration,
         });
+
+        // Limpiar memoria
+        requestTimes.delete(response.url());
       });
+
     }
 
     // JavaScript errors
@@ -131,10 +161,10 @@ export class MetricsCollector {
           const collectMetrics = () => {
             const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
             const paint = performance.getEntriesByType('paint');
-            
+
             const fcp = paint.find(entry => entry.name === 'first-contentful-paint')?.startTime || 0;
             const ttfb = navigation ? navigation.responseStart - navigation.fetchStart : 0;
-            
+
             return {
               navigationStart: navigation?.fetchStart || 0,
               loadEventEnd: navigation?.loadEventEnd || 0,
@@ -151,7 +181,7 @@ export class MetricsCollector {
           let lcp = 0;
           let cls = 0;
           let fid = 0;
-          
+
           try {
             const observer = new PerformanceObserver((list) => {
               const entries = list.getEntries();
@@ -222,7 +252,7 @@ export class MetricsCollector {
     try {
       const resourceMetrics = await this.page.evaluate(() => {
         const resources = performance.getEntriesByType('resource') as PerformanceResourceTiming[];
-        
+
         let jsLoadTime = 0;
         let cssLoadTime = 0;
         let imageLoadTime = 0;
@@ -297,7 +327,7 @@ export class MetricsCollector {
    */
   async collectAllMetrics(): Promise<PerformanceMetrics> {
     console.log('📊 Collecting all performance metrics...');
-    
+
     const webVitals = await this.collectWebVitals();
     const resourceMetrics = await this.collectResourceMetrics();
     const memoryMetrics = await this.collectMemoryMetrics();
@@ -325,8 +355,8 @@ export class MetricsCollector {
       customMetrics: { ...this.customMetrics },
       jsErrors: [...this.jsErrors],
       consoleErrors: this.consoleLogs.filter(log => log.includes('[error]')),
-      networkLogs: this.networkLogs,
-      
+      networkLogs: [...this.networkLogs],
+
       // Merge collected metrics
       ...webVitals,
       ...resourceMetrics,

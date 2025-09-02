@@ -4,6 +4,7 @@ import { Page, Locator } from '@playwright/test';
 import { BasePage } from './base.page';
 import { AppConfig } from '../config/ConfigManager';
 import { DashboardPage } from './dashboard.page';
+import { TestTimer } from '../utils/timer.utils';
 
 export class LoginPage extends BasePage {
   [x: string]: any;
@@ -24,40 +25,40 @@ export class LoginPage extends BasePage {
   /**
    * Complete login flow with performance tracking
    */
-  async login(appConfig: AppConfig): Promise<void> {
+  async login(appConfig: AppConfig, timer: TestTimer): Promise<void> {
+
+    // PASO 1: LOGIN
+    timer.startStep(appConfig.name, 'Login');
+
     const loginStartTime = Date.now();
     console.log(`Starting login flow for ${appConfig.name}`);
 
     try {
       // Navigate to login page
+      timer.startSubStep('Navegar a la pagina');
       await this.goto(appConfig.baseUrl);
+      timer.endSubStep();
 
       // Fill credentials
-      await this.fillDropdown(this.accountTypeInput, appConfig.accountType, "Account_Type");
-      await this.fillInput(this.usernameInput, appConfig.username, "Username");
-      await this.fillInput(this.passwordInput, appConfig.password, "Password");
+      timer.startSubStep('Ingresar credenciales');
+      await this.fillDropdown(this.accountTypeInput, appConfig.accountType);
+      await this.fillInput(this.usernameInput, appConfig.username);
+      await this.fillInput(this.passwordInput, appConfig.password);
 
       // Submit form
-      await this.clickElementAndWait(this.loginButton, "Login_Button");
+      await this.clickElement(this.loginButton);
+      timer.endSubStep();
 
       // Wait for successful login
+      timer.startSubStep('Espera de login exitoso');
       await this.dashboardPage.waitForSuccessfulLogin();
+      timer.endSubStep();
+      timer.endStep();
 
-      const loginEndTime = Date.now();
-      const totalLoginTime = loginEndTime - loginStartTime;
-
-      await this.metricsCollector.recordCustomMetric('total_login_time', totalLoginTime);
-      console.log(`✅ Login completed successfully in ${totalLoginTime}ms for ${appConfig.name}`);
-
-      // Collect final performance metrics
-      await this.collectPerformanceMetrics();
+      console.log(`✅ Login completed successfully in for ${appConfig.name}`);
 
     } catch (error) {
-      const loginEndTime = Date.now();
-      const totalLoginTime = loginEndTime - loginStartTime;
-
-      await this.metricsCollector.recordCustomMetric('failed_login_time', totalLoginTime);
-      console.error(`❌ Login failed for ${appConfig.name} after ${totalLoginTime}ms:`, error);
+      console.error(`❌ Login failed for ${appConfig.name}`, error);
 
       // Take screenshot for debugging
       await this.takeScreenshot(`login_failed_${appConfig.name}`);

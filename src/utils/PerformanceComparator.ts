@@ -66,10 +66,10 @@ export class PerformanceComparator {
     app2Runs: PerformanceMetrics[]
   ): ComparisonResult {
     console.log(`🔄 Comparing performance between ${app1Name} and ${app2Name}`);
-    
+
     const app1Stats = this.calculateStatistics(app1Runs);
     const app2Stats = this.calculateStatistics(app2Runs);
-    
+
     const comparisons = this.compareMetrics(app1Stats, app2Stats);
     const winnerByCategory = this.calculateWinnerByCategory(comparisons);
     const summary = this.generateSummary(comparisons, app1Name, app2Name);
@@ -94,7 +94,7 @@ export class PerformanceComparator {
 
     console.log(`🏆 Overall winner: ${summary.overallWinner}`);
     console.log(`📊 ${app1Name} wins: ${summary.app1Wins}, ${app2Name} wins: ${summary.app2Wins}`);
-    
+
     return result;
   }
 
@@ -103,7 +103,7 @@ export class PerformanceComparator {
    */
   private calculateStatistics(runs: PerformanceMetrics[]): StatisticalMetrics['statistics'] {
     const metricNames = this.getAllMetricNames(runs);
-    
+
     const statistics: StatisticalMetrics['statistics'] = {
       mean: {},
       median: {},
@@ -115,7 +115,7 @@ export class PerformanceComparator {
 
     for (const metricName of metricNames) {
       const values = this.extractMetricValues(runs, metricName);
-      
+
       if (values.length > 0) {
         statistics.mean[metricName] = stats.mean(values);
         statistics.median[metricName] = stats.median(values);
@@ -134,7 +134,7 @@ export class PerformanceComparator {
    */
   private getAllMetricNames(runs: PerformanceMetrics[]): string[] {
     const metricNames = new Set<string>();
-    
+
     for (const run of runs) {
       // Core metrics
       metricNames.add('lcp');
@@ -150,12 +150,12 @@ export class PerformanceComparator {
       metricNames.add('imageLoadTime');
       metricNames.add('requestCount');
       metricNames.add('transferSize');
-      
+
       // Custom metrics
       for (const customMetricName of Object.keys(run.customMetrics)) {
         metricNames.add(customMetricName);
       }
-      
+
       // Memory metrics
       if (run.memoryUsage !== undefined) {
         metricNames.add('memoryUsage');
@@ -175,7 +175,7 @@ export class PerformanceComparator {
         if (run.customMetrics[metricName] !== undefined) {
           return run.customMetrics[metricName];
         }
-        
+
         // Check if it's a standard metric
         const value = (run as any)[metricName];
         return typeof value === 'number' ? value : null;
@@ -201,13 +201,13 @@ export class PerformanceComparator {
 
       const difference = app2Value - app1Value;
       const percentageDifference = app1Value > 0 ? (difference / app1Value) * 100 : 0;
-      
+
       let winner: string;
       if (Math.abs(percentageDifference) < 5) {
         winner = 'tie';
       } else {
         // For most metrics, lower is better
-        winner = this.isLowerBetter(metricName) 
+        winner = this.isLowerBetter(metricName)
           ? (app1Value < app2Value ? this.config.app1.name : this.config.app2.name)
           : (app1Value > app2Value ? this.config.app1.name : this.config.app2.name);
       }
@@ -235,12 +235,12 @@ export class PerformanceComparator {
    */
   private isLowerBetter(metricName: string): boolean {
     const lowerBetterMetrics = [
-      'lcp', 'fid', 'cls', 'ttfb', 'fcp', 'totalLoadTime', 'domLoadTime', 
-      'networkTime', 'jsLoadTime', 'cssLoadTime', 'imageLoadTime', 
+      'lcp', 'fid', 'cls', 'ttfb', 'fcp', 'totalLoadTime', 'domLoadTime',
+      'networkTime', 'jsLoadTime', 'cssLoadTime', 'imageLoadTime',
       'total_login_time', 'login_page_navigation_time', 'username_fill_time',
       'password_fill_time', 'login_button_click_time', 'memoryUsage'
     ];
-    
+
     return lowerBetterMetrics.includes(metricName);
   }
 
@@ -324,26 +324,26 @@ export class PerformanceComparator {
     const app2Wins = comparisons.filter(c => c.winner === app2Name).length;
     const ties = comparisons.filter(c => c.winner === 'tie').length;
 
-    const overallWinner = app1Wins > app2Wins ? app1Name : 
-                         app2Wins > app1Wins ? app2Name : 'tie';
+    const overallWinner = app1Wins > app2Wins ? app1Name :
+      app2Wins > app1Wins ? app2Name : 'tie';
 
     const significantDifferences = comparisons.filter(c => c.significance === 'significant').length;
 
     const improvementPercentages = comparisons
       .filter(c => c.winner !== 'tie')
       .map(c => Math.abs(c.percentageDifference));
-    
-    const averageImprovementPercentage = improvementPercentages.length > 0 
+
+    const averageImprovementPercentage = improvementPercentages.length > 0
       ? stats.mean(improvementPercentages) : 0;
 
     // Check for regression (app2 performing worse than app1 by more than threshold)
     const regressionThreshold = this.config.test.regressionThresholdPercentage;
-    const regressions = comparisons.filter(c => 
+    const regressions = comparisons.filter(c =>
       c.winner === app1Name && Math.abs(c.percentageDifference) > regressionThreshold
     );
 
     const regressionDetected = regressions.length > 0;
-    const regressionPercentage = regressionDetected 
+    const regressionPercentage = regressionDetected
       ? Math.max(...regressions.map(r => Math.abs(r.percentageDifference))) : 0;
 
     return {
@@ -364,12 +364,12 @@ export class PerformanceComparator {
    */
   generateReport(result: ComparisonResult): string {
     const lines: string[] = [];
-    
+
     lines.push('='.repeat(80));
     lines.push('PERFORMANCE COMPARISON REPORT');
     lines.push('='.repeat(80));
     lines.push('');
-    
+
     lines.push(`Application 1: ${result.app1Name} (${this.config.app1.technology})`);
     lines.push(`Application 2: ${result.app2Name} (${this.config.app2.technology})`);
     lines.push(`Environment: ${this.config.test.environment.toUpperCase()}`);
@@ -384,7 +384,7 @@ export class PerformanceComparator {
     lines.push(`${result.app2Name} wins: ${result.summary.app2Wins}`);
     lines.push(`Ties: ${result.summary.ties}`);
     lines.push(`Average improvement: ${result.summary.averageImprovementPercentage}%`);
-    
+
     if (result.summary.regressionDetected) {
       lines.push(`⚠️  REGRESSION DETECTED: ${result.summary.regressionPercentage}%`);
     }

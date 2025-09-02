@@ -1,4 +1,4 @@
-import { Page, Locator, expect } from '@playwright/test';
+import { Page, Locator, expect, FrameLocator } from '@playwright/test';
 import { ConfigManager } from '../config/ConfigManager';
 import { MetricsCollector } from '../metrics/MetricsCollector';
 
@@ -32,8 +32,6 @@ export abstract class BasePage {
     timeout?: number;
     referer?: string;
   }): Promise<void> {
-    const startTime = performance.now();
-
     try {
       console.log(`Navigating to: ${url}`);
 
@@ -44,11 +42,7 @@ export abstract class BasePage {
       });
 
       await this.waitForPageLoad();
-
-      const navigationTime = performance.now() - startTime;
-      await this.metricsCollector.recordCustomMetric('navigationTime', navigationTime);
-
-      console.log(`Navigation completed in ${navigationTime.toFixed(2)}ms`);
+      console.log(`Navigation completed`);
     } catch (error) {
       console.error(`Navigation failed for URL: ${url}`, error);
       throw new Error(`Failed to navigate to ${url}: ${error}`);
@@ -59,13 +53,8 @@ export abstract class BasePage {
    * Refresh the current page with performance tracking
    */
   async refresh(): Promise<void> {
-    const startTime = performance.now();
-
     await this.page.reload({ waitUntil: 'networkidle' });
     await this.waitForPageLoad();
-
-    const refreshTime = performance.now() - startTime;
-    await this.metricsCollector.recordCustomMetric('refreshTime', refreshTime);
   }
 
   /**
@@ -94,16 +83,14 @@ export abstract class BasePage {
    * @param timeout - Optional timeout override
    * @returns Promise<Locator>
    */
-  async waitForElement(selector: string, description?: string, timeout?: number): Promise<Locator> {
-    const startTime = performance.now();
+  async waitForElement(selector: string, description: string, frame?: FrameLocator): Promise<Locator> {
     try {
-      const element = this.page.locator(selector);
+      let element = frame ? frame.locator(selector) : this.page.locator(selector);
+
       await element.waitFor({
         state: 'visible',
-        timeout: timeout || this.config.test.timeout
+        timeout: this.config.test.timeout
       });
-      const totalTime = performance.now() - startTime;
-      await this.metricsCollector.recordCustomMetric(`Wait_${description || selector}`, totalTime);
 
       return element;
 
@@ -111,25 +98,21 @@ export abstract class BasePage {
       throw new Error(`Element not found or not visible: ${selector}. ${error}`);
     }
   }
-
-
+  
   /**
-   * Wait for element to be visible and enabled
+   * Wait for element to be visible with enhanced error handling
    * @param selector - Element selector
    * @param timeout - Optional timeout override
    * @returns Promise<Locator>
    */
-  async waitForElementEnabled(selector: string, timeout?: number): Promise<Locator> {
+  async waitForElementLocator(selector: Locator, description: string): Promise<void> {
     try {
-      const element = this.page.locator(selector);
-      await element.waitFor({
+      await selector.waitFor({
         state: 'visible',
-        timeout: timeout || this.config.test.timeout
+        timeout: this.config.test.timeout
       });
-      await expect(element).toBeEnabled({ timeout: timeout || this.config.test.timeout });
-      return element;
     } catch (error) {
-      throw new Error(`Element not found, not visible, or not enabled: ${selector}. ${error}`);
+      throw new Error(`Element not found or not visible: ${selector}. ${error}`);
     }
   }
 
@@ -156,49 +139,24 @@ export abstract class BasePage {
    */
   async clickElement(
     selector: string,
-    description: string = '',
     options?: {
       force?: boolean;
       timeout?: number;
       position?: { x: number; y: number };
       modifiers?: ('Alt' | 'Control' | 'Meta' | 'Shift')[];
-    }
+    },
+    frame?: FrameLocator
   ): Promise<void> {
-    const startTime = performance.now();
-
     try {
-      const element = await this.waitForElement(selector, undefined, options?.timeout);
+      let element = frame ? frame.locator(selector) : this.page.locator(selector);
       await element.click({
         force: options?.force,
         timeout: options?.timeout || this.config.test.timeout,
         position: options?.position,
         modifiers: options?.modifiers
       });
-
-      const clickTime = performance.now() - startTime;
-      await this.metricsCollector.recordCustomMetric(`click_${description || selector}_time`, clickTime);
     } catch (error) {
       throw new Error(`Failed to click element: ${selector}. ${error}`);
-    }
-  }
-
-  /**
-   * Click element and wait for it to be enabled first
-   * @param selector - Element selector
-   * @param description - Optional description for metrics
-   */
-  async clickElementAndWait(selector: string, description: string = ''): Promise<void> {
-    const startTime = performance.now();
-
-    try {
-      const element = await this.waitForElementEnabled(selector);
-      await element.click();
-      await this.waitForNetworkIdle()
-
-      const clickTime = performance.now() - startTime;
-      await this.metricsCollector.recordCustomMetric(`click_${description || 'element'}_time`, clickTime);
-    } catch (error) {
-      throw new Error(`Failed to click enabled element: ${selector}. ${error}`);
     }
   }
 
@@ -207,15 +165,10 @@ export abstract class BasePage {
    * @param selector - Element selector
    * @param description - Optional description for metrics
    */
-  async doubleClickElement(selector: string, description: string = ''): Promise<void> {
-    const startTime = performance.now();
-
+  async doubleClickElement(selector: string, frame?: FrameLocator): Promise<void> {
     try {
-      const element = await this.waitForElement(selector);
+      let element = frame ? frame.locator(selector) : this.page.locator(selector);
       await element.dblclick();
-
-      const doubleClickTime = performance.now() - startTime;
-      await this.metricsCollector.recordCustomMetric(`doubleClick_${description || 'element'}_time`, doubleClickTime);
     } catch (error) {
       throw new Error(`Failed to double-click element: ${selector}. ${error}`);
     }
@@ -226,15 +179,10 @@ export abstract class BasePage {
    * @param selector - Element selector
    * @param description - Optional description for metrics
    */
-  async rightClickElement(selector: string, description: string = ''): Promise<void> {
-    const startTime = performance.now();
-
+  async rightClickElement(selector: string, frame?: FrameLocator): Promise<void> {
     try {
-      const element = await this.waitForElement(selector);
+      let element = frame ? frame.locator(selector) : this.page.locator(selector);
       await element.click({ button: 'right' });
-
-      const rightClickTime = performance.now() - startTime;
-      await this.metricsCollector.recordCustomMetric(`rightClick_${description || 'element'}_time`, rightClickTime);
     } catch (error) {
       throw new Error(`Failed to right-click element: ${selector}. ${error}`);
     }
@@ -250,36 +198,21 @@ export abstract class BasePage {
   async fillInput(
     selector: string,
     value: string,
-    description: string = '',
-    options?: {
-      force?: boolean;
-      timeout?: number;
-      noWaitAfter?: boolean;
-    }
+    frame?: FrameLocator,
   ): Promise<void> {
-    const startTime = performance.now();
-
     try {
-      const element = await this.waitForElement(selector, undefined, options?.timeout);
-
+      let element = frame ? frame.locator(selector) : this.page.locator(selector);
       // Clear existing content
       await element.clear();
 
       // Fill with new value
-      await element.fill(value, {
-        force: options?.force,
-        timeout: options?.timeout || this.config.test.timeout,
-        noWaitAfter: options?.noWaitAfter
-      });
+      await element.fill(value);
 
       // Verify the value was set correctly
       const actualValue = await element.inputValue();
       if (actualValue !== value) {
         console.warn(`Expected value "${value}" but got "${actualValue}" for selector: ${selector}`);
       }
-
-      const fillTime = performance.now() - startTime;
-      await this.metricsCollector.recordCustomMetric(`fill_${description || 'input'}_time`, fillTime);
     } catch (error) {
       throw new Error(`Failed to fill input: ${selector} with value: ${value}. ${error}`);
     }
@@ -291,9 +224,9 @@ export abstract class BasePage {
    * @param text - Text to type
    * @param delay - Delay between keystrokes (ms)
    */
-  async typeText(selector: string, text: string, delay: number = 100): Promise<void> {
+  async typeText(selector: string, text: string, delay: number = 100, description: string, frame?: FrameLocator): Promise<void> {
     try {
-      const element = await this.waitForElement(selector);
+      const element = await this.waitForElement(selector, description, frame);
       await element.type(text, { delay });
     } catch (error) {
       throw new Error(`Failed to type text in element: ${selector}. ${error}`);
@@ -306,23 +239,11 @@ export abstract class BasePage {
    * @param value - Value or option text to select
    * @param description - Optional description for metrics
    */
-  async fillDropdown(selector: string, value: string, description: string = ''): Promise<void> {
-    const startTime = performance.now();
-
+  async fillDropdown(selector: string, value: string, frame?: FrameLocator): Promise<void> {
     try {
-      const element = this.page.locator(selector);
-      await element.waitFor({
-        state: 'visible',
-        timeout: this.config.test.timeout
-      });
-
-      console.log(`Selecting option "${value}" in dropdown: ${selector}`);
-
-      // Try to select by value first, then by text
+      let element = frame ? frame.locator(selector) : this.page.locator(selector);
       await element.selectOption({ value });
 
-      const fillTime = performance.now() - startTime;
-      await this.metricsCollector.recordCustomMetric(`fill_${description || 'dropdown'}_time`, fillTime);
     } catch (error) {
       throw new Error(`Failed to select option "${value}" in dropdown: ${selector}. ${error}`);
     }
@@ -335,22 +256,14 @@ export abstract class BasePage {
    * @param value - Value or option text to select
    * @param description - Optional description for metrics
    */
-  async fillDropdownLabel(selector: string, value: string, description: string = ''): Promise<void> {
-    const startTime = performance.now();
-
+  async fillDropdownLabel(selector: string, value: string = ''): Promise<void> {
     try {
       const element = this.page.locator(selector);
       await element.waitFor({
         state: 'visible',
         timeout: this.config.test.timeout
       });
-
-      console.log(`Selecting option "${value}" in dropdown: ${selector}`);
-
       await element.selectOption({ label: value });
-
-      const fillTime = performance.now() - startTime;
-      await this.metricsCollector.recordCustomMetric(`fill_${description || 'dropdown'}_time`, fillTime);
     } catch (error) {
       throw new Error(`Failed to select option "${value}" in dropdown: ${selector}. ${error}`);
     }
@@ -361,9 +274,9 @@ export abstract class BasePage {
    * @param selector - Element selector
    * @param checked - Whether to check or uncheck
    */
-  async setCheckbox(selector: string, checked: boolean): Promise<void> {
+  async setCheckbox(selector: string, checked: boolean, frame?: FrameLocator): Promise<void> {
     try {
-      const element = await this.waitForElement(selector);
+      let element = frame ? frame.locator(selector) : this.page.locator(selector);
       await element.setChecked(checked);
     } catch (error) {
       throw new Error(`Failed to ${checked ? 'check' : 'uncheck'} element: ${selector}. ${error}`);
@@ -375,9 +288,9 @@ export abstract class BasePage {
    * @param selector - File input selector
    * @param filePaths - Array of file paths to upload
    */
-  async uploadFiles(selector: string, filePaths: string[]): Promise<void> {
+  async uploadFiles(selector: string, filePaths: string[], description: string, frame?: FrameLocator): Promise<void> {
     try {
-      const element = await this.waitForElement(selector);
+      const element = await this.waitForElement(selector, description, frame);
       await element.setInputFiles(filePaths);
     } catch (error) {
       throw new Error(`Failed to upload files to element: ${selector}. ${error}`);
@@ -512,9 +425,9 @@ export abstract class BasePage {
    * @param selector - Element selector
    * @returns Promise<string>
    */
-  async getElementText(selector: string): Promise<string> {
+  async getElementText(selector: string, frame?: FrameLocator): Promise<string> {
     try {
-      const element = await this.waitForElement(selector);
+      let element = frame ? frame.locator(selector) : this.page.locator(selector);
       return await element.textContent() || '';
     } catch (error) {
       throw new Error(`Failed to get text from element: ${selector}. ${error}`);
@@ -526,9 +439,9 @@ export abstract class BasePage {
    * @param selector - Element selector
    * @returns Promise<string>
    */
-  async getElementInnerText(selector: string): Promise<string> {
+  async getElementInnerText(selector: string, frame?: FrameLocator): Promise<string> {
     try {
-      const element = await this.waitForElement(selector);
+      let element = frame ? frame.locator(selector) : this.page.locator(selector);
       return await element.innerText();
     } catch (error) {
       throw new Error(`Failed to get inner text from element: ${selector}. ${error}`);
@@ -540,9 +453,9 @@ export abstract class BasePage {
    * @param selector - Input element selector
    * @returns Promise<string>
    */
-  async getInputValue(selector: string): Promise<string> {
+  async getInputValue(selector: string, frame?: FrameLocator): Promise<string> {
     try {
-      const element = await this.waitForElement(selector);
+      let element = frame ? frame.locator(selector) : this.page.locator(selector);
       return await element.inputValue();
     } catch (error) {
       throw new Error(`Failed to get input value from element: ${selector}. ${error}`);
@@ -555,9 +468,9 @@ export abstract class BasePage {
    * @param attribute - Attribute name
    * @returns Promise<string | null>
    */
-  async getElementAttribute(selector: string, attribute: string): Promise<string | null> {
+  async getElementAttribute(selector: string, attribute: string, description: string, frame?: FrameLocator): Promise<string | null> {
     try {
-      const element = await this.waitForElement(selector);
+      const element = await this.waitForElement(selector, description, frame);
       return await element.getAttribute(attribute);
     } catch (error) {
       throw new Error(`Failed to get attribute "${attribute}" from element: ${selector}. ${error}`);
@@ -681,51 +594,15 @@ export abstract class BasePage {
    * Scroll to element
    * @param selector - Element selector
    */
-  async scrollToElement(selector: string): Promise<void> {
+  async scrollToElement(selector: string, description: string, frame?: FrameLocator): Promise<void> {
     try {
-      const element = await this.waitForElement(selector);
+      const element = await this.waitForElement(selector, description, frame);
       await element.scrollIntoViewIfNeeded();
     } catch (error) {
       throw new Error(`Failed to scroll to element: ${selector}. ${error}`);
     }
   }
 
-  /**
-   * Scroll page by pixels
-   * @param x - Horizontal scroll amount
-   * @param y - Vertical scroll amount
-   */
-  async scrollBy(x: number, y: number): Promise<void> {
-    await this.page.evaluate(({ x, y }) => {
-      window.scrollBy(x, y);
-    }, { x, y });
-  }
-
-  /**
-   * Focus on element
-   * @param selector - Element selector
-   */
-  async focusElement(selector: string): Promise<void> {
-    try {
-      const element = await this.waitForElement(selector);
-      await element.focus();
-    } catch (error) {
-      throw new Error(`Failed to focus element: ${selector}. ${error}`);
-    }
-  }
-
-  /**
-   * Hover over element
-   * @param selector - Element selector
-   */
-  async hoverElement(selector: string): Promise<void> {
-    try {
-      const element = await this.waitForElement(selector);
-      await element.hover();
-    } catch (error) {
-      throw new Error(`Failed to hover over element: ${selector}. ${error}`);
-    }
-  }
 
   // =============================================
   // MONITORING AND METRICS METHODS

@@ -1,4 +1,3 @@
-import { string } from "zod";
 import CambioDeNumero from '../data-driven/CambioDeNumero.json'
 
 export interface ICambioDeNumero {
@@ -15,5 +14,3 @@ export interface ICambioDeNumero {
         SuscriptorNumber?: string;
     }
 }
-const datacambiodenumero = CambioDeNumero as ICambioDeNumero;
-export { datacambiodenumero };

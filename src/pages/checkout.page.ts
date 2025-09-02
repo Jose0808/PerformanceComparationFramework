@@ -1,6 +1,8 @@
 import { Page } from '@playwright/test';
 import { BasePage } from './base.page';
 import { FrameOptionsByRole } from '../types/frameOptions';
+import { AppConfig } from '../config/ConfigManager';
+import { TestTimer } from '../utils/timer.utils';
 
 
 export class Checkout extends BasePage {
@@ -16,11 +18,11 @@ export class Checkout extends BasePage {
     /**
      * Busqueda de clientes
      */
-    async checkoutValidate(): Promise<void> {
-        const StartTime = Date.now();
+    async checkoutValidate(appConfig: AppConfig, timer: TestTimer): Promise<void> {
         console.log(`Starting check out validate`);
-
         try {
+            timer.startStep(appConfig.name, 'Checkout');
+            timer.startSubStep('Espera cargue pantalla: Checkout detalle de pago');
 
             const frameSelector = await this.page.locator(this.currentFrame).contentFrame();
             
@@ -28,21 +30,14 @@ export class Checkout extends BasePage {
                 state: 'visible',
                 timeout: this.config.test.timeout
             });
+            timer.endSubStep();
+            
+            timer.endStep();
 
-            const EndTime = Date.now();
-            const totalTime = EndTime - StartTime;
-
-            await this.metricsCollector.recordCustomMetric('total_checkout_validate_time', totalTime);
-            console.log(`✅ Checkout Validate completed successfully in ${totalTime}ms`);
-
-            // Collect final performance metrics
-            await this.collectPerformanceMetrics();
+            console.log(`✅ Checkout Validate completed successfully`);
 
         } catch (error) {
-            const EndTime = Date.now();
-            const totalTime = EndTime - StartTime;
-            await this.metricsCollector.recordCustomMetric('failed_checkout_validate_time', totalTime);
-            console.error(`❌ Checkout Validate failed for after ${totalTime}ms:`, error);
+            console.error(`❌ Checkout Validate failed`, error);
 
             throw error;
         }

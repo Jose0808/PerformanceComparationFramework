@@ -1,8 +1,9 @@
-import { Page, Locator, FrameLocator } from '@playwright/test';
+import { Page, Locator, FrameLocator, expect } from '@playwright/test';
 import { BasePage } from './base.page';
 import { AppConfig } from '../config/ConfigManager';
 import { ICambioDeNumero } from '../types/cambioDeNumero';
 import { FrameOptionsByRole } from '../types/frameOptions';
+import { TestTimer } from '../utils/timer.utils';
 
 
 export class ChangeNumber extends BasePage {
@@ -23,42 +24,61 @@ export class ChangeNumber extends BasePage {
     /**
      * Busqueda de clientes
      */
-    async changeNumber(): Promise<void> {
-        const StartTime = Date.now();
+    async changeNumber(appConfig: AppConfig, timer: TestTimer): Promise<void> {
         console.log(`Starting change number`);
 
         try {
-
+            timer.startStep(appConfig.name, 'Cambio de Numero');
+            timer.startSubStep('Espera cargue pantalla: Cambiar el numero');
             const frameSelector = await this.page.locator(this.currentFrame).contentFrame();
             await frameSelector.getByText("Cambiar el numero").waitFor({
                 state: 'visible',
                 timeout: this.config.test.timeout
             });
+            timer.endSubStep();
 
-            await frameSelector.getByText("Aleatorio").click();
+            timer.startSubStep('Espera cargue de datos');
+            const [firstControl, secondControl] = [
+                frameSelector.locator('.form_control.ng-binding').nth(0),
+                frameSelector.locator('.form_control.ng-binding').nth(1)
+            ];
 
+            await Promise.all([
+                expect(firstControl).not.toBeEmpty(),
+                expect(secondControl).not.toBeEmpty(),
+            ]);
+            timer.endSubStep();
+
+            timer.startSubStep('Espera del loader');
             await frameSelector.locator("#loadingcover").waitFor({
-                state: 'hidden',
-                timeout: this.config.test.timeout
+                state: 'hidden'
+            })
+            timer.endSubStep();
+
+            await this.page.waitForTimeout(3000);
+            timer.startSubStep('Click en botón Aleatorio');
+            await frameSelector.getByText("Aleatorio").click();
+            timer.endSubStep();
+
+            timer.startSubStep('Espera del loader');
+            await frameSelector.locator("#loadingcover").waitFor({
+                state: 'hidden'
             });
+            timer.endSubStep();
+            timer.startSubStep('Espera de input con el nuevo número');
+            await expect(frameSelector.locator('#input_selPhoneNum'))
+                .not.toBeEmpty();
+            timer.endSubStep();
 
-            await frameSelector.locator(".submitWrap").getByText("Enviar").click();
+            // timer.startSubStep('Click en Enviar');
+            // await this.page.waitForTimeout(3000);
+            // await frameSelector.locator(".submitWrap").getByText("Enviar").click();
+            // timer.endSubStep();
 
-            const EndTime = Date.now();
-            const totalTime = EndTime - StartTime;
-
-            await this.metricsCollector.recordCustomMetric('total_change_number_time', totalTime);
-            console.log(`✅ Change Number completed successfully in ${totalTime}ms`);
-
-            // Collect final performance metrics
-            await this.collectPerformanceMetrics();
-
+            timer.endStep();
+            console.log(`✅ Change Number completed successfully`);
         } catch (error) {
-            const EndTime = Date.now();
-            const totalTime = EndTime - StartTime;
-            await this.metricsCollector.recordCustomMetric('failed_change_number_time', totalTime);
-            console.error(`❌ Change Number failed for after ${totalTime}ms:`, error);
-
+            console.error(`❌ Change Number failed:`, error);
             throw error;
         }
     }

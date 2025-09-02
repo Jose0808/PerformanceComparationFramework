@@ -1,32 +1,115 @@
 {
   "name": "performance-comparison-framework",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Framework de comparación de rendimiento con Playwright",
+  "main": "electron/main.js",
   "scripts": {
-    "test": "npx playwright test",
-    "test:headed": "npx playwright test --headed",
-    "test:debug": "npx playwright test --debug",
-    "test:ui": "npx playwright test --ui",
-    "report": "npx playwright show-report",
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "test:ui": "playwright test --ui",
+    "report": "playwright show-report",
     "allure:generate": "allure generate allure-results --clean -o allure-report",
     "allure:serve": "allure serve allure-results",
-    "install:browsers": "npx playwright install"
+    "install:browsers": "playwright install",
+    "electron": "electron .",
+    "electron:dev": "electron . --dev",
+    "build:electron": "electron-builder --win",
+    "build:all": "electron-builder --win --mac --linux",
+    "dist": "npm run build:electron",
+    "pack": "electron-builder --dir",
+    "postinstall": "electron-builder install-app-deps"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "playwright",
+    "performance",
+    "testing",
+    "automation"
+  ],
+  "author": "Jose Colmenares (INDRA)",
   "license": "ISC",
   "dependencies": {
     "@playwright/test": "^1.54.2",
     "dotenv": "^17.2.1",
+    "electron-store": "^8.1.0",
+    "open": "^10.2.0",
     "simple-statistics": "^7.8.8",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.2",
-    "zod": "^4.0.17"
+    "typescript": "^5.9.2"
   },
   "devDependencies": {
     "@types/node": "^24.2.1",
     "allure-commandline": "^2.34.1",
-    "allure-playwright": "^3.3.3"
+    "allure-playwright": "^3.3.3",
+    "electron": "^27.0.0",
+    "electron-builder": "^24.6.4"
+  },
+  "build": {
+    "appId": "com.company.performance-framework",
+    "productName": "Performance Testing Framework",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "electron/**/*",
+      "src/**/*",
+      "package.json",
+      "playwright.config.ts",
+      "tsconfig.json",
+      ".env",
+      "!node_modules/.cache",
+      "!**/.git",
+      "!**/node_modules/*/{test,__tests__,tests,powered-test,example,examples}",
+      "!**/node_modules/*.d.ts",
+      "!**/node_modules/.bin"
+    ],
+    "extraResources": [
+      {
+        "from": "src",
+        "to": "src"
+      },
+      {
+        "from": "playwright.config.ts",
+        "to": "playwright.config.ts"
+      },
+      {
+        "from": ".env",
+        "to": ".env"
+      }
+    ],
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Pruebas de Latencia",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "publisherName": "INDRA"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "build/icon.icns",
+      "category": "public.app-category.developer-tools"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "build/icon.png",
+      "category": "Development"
+    }
   }
 }
