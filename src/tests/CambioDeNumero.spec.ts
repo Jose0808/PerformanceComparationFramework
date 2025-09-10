@@ -41,18 +41,6 @@ test.describe('Cambio de Numero Flow', () => {
     basicInfo = new BasicInfo(page);
     changeNumber = new ChangeNumber(page);
     checkout = new Checkout(page);
-    // Apply network throttling if configured
-    if (config.network.latency > 0) {
-      const cdp = await context.newCDPSession(page);
-      await cdp.send('Network.enable');
-      await cdp.send('Network.emulateNetworkConditions', {
-        offline: false,
-        latency: config.network.latency,
-        downloadThroughput: config.network.downloadThroughput,
-        uploadThroughput: config.network.uploadThroughput,
-        connectionType: 'cellular4g'
-      });
-    }
 
     // Clear browser data between runs if configured
     if (config.test.clearCacheBetweenRuns) {
@@ -70,32 +58,23 @@ test.describe('Cambio de Numero Flow', () => {
           console.log(`URL: ${app.baseUrl}`);
 
           let metrics: any;
+          // const metricsCollector = new MetricsCollector(page);
           let testError: string | undefined;
+          let timer = new TestTimer(page);
 
           try {
-            // Enable network throttling
-            await loginPage.enableNetworkThrottling();
-
-            let timer = new TestTimer();
+            
             const datacambiodenumero = CambioDeNumero as unknown as ICambioDeNumero;
             await loginPage.login(app, timer);
-            const menu = "Operación Integrada (Nuevo)";
-            const subMenu = "Vista 360° Individual";
-            await dashboardPage.selectOnDashboard(app, timer, menu, subMenu);
-            await vista360IndividualPage.searchCustomer(app, timer, datacambiodenumero.filters);
-            const menuSuscription = "Cambio de número";
-            await basicInfo.selectSuscription(app, timer, datacambiodenumero.SuscriptionRow, menuSuscription);
-            await changeNumber.changeNumber(app, timer);
+            // const menu = "Operación Integrada (Nuevo)";
+            // const subMenu = "Vista 360° Individual";
+            // await dashboardPage.selectOnDashboard(app, timer, menu, subMenu);
+            // await vista360IndividualPage.searchCustomer(app, timer, datacambiodenumero.filters);
+            // const menuSuscription = "Cambio de número";
+            // await basicInfo.selectSuscription(app, timer, datacambiodenumero.SuscriptionRow, menuSuscription);
+            // await changeNumber.changeNumber(app, timer);
+
             // await checkout.checkoutValidate(app,timer);
-
-            let data = timer.getExecution(app.name, 'Proceso completo de cambio de número');
-
-            test.info().annotations.push({
-              type: 'performance-data-' + app.name,
-              description: JSON.stringify({
-                data
-              })
-            });
 
             // Collect performance metrics
             metrics = await dashboardPage.collectPerformanceMetrics();
@@ -105,8 +84,7 @@ test.describe('Cambio de Numero Flow', () => {
             console.log(`📊 LCP: ${metrics.lcp}ms, FCP: ${metrics.fcp}ms, TTFB: ${metrics.ttfb}ms`);
 
             // Validate against thresholds
-            const metricsCollector = new MetricsCollector(page);
-            const thresholdCheck = metricsCollector.checkThresholds(metrics);
+            const thresholdCheck = timer.checkThresholds(metrics);
 
             if (!thresholdCheck.passed) {
               console.warn(`⚠️  Threshold violations detected:`);
@@ -125,6 +103,15 @@ test.describe('Cambio de Numero Flow', () => {
 
           } finally {
             // Store performance data in test annotation for reporter
+            let data = timer.getExecution(app.name, 'Proceso completo de cambio de número');
+            test.info().annotations.push({
+              type: 'performance-data-' + app.name,
+              description: JSON.stringify({
+                data,
+                iteration: iteration,
+              })
+            });
+
             if (metrics) {
               test.info().annotations.push({
                 type: 'performance-data',

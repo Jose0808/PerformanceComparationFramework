@@ -2,23 +2,21 @@
   "name": "performance-comparison-framework",
   "version": "1.0.0",
   "description": "Framework de comparación de rendimiento con Playwright",
-  "main": "electron/main.js",
+  "main": "dist/main.js",
   "scripts": {
     "test": "playwright test",
     "test:headed": "playwright test --headed",
     "test:debug": "playwright test --debug",
     "test:ui": "playwright test --ui",
     "report": "playwright show-report",
-    "allure:generate": "allure generate allure-results --clean -o allure-report",
-    "allure:serve": "allure serve allure-results",
-    "install:browsers": "playwright install",
+    "install:browsers": "playwright install --with-deps",
     "electron": "electron .",
     "electron:dev": "electron . --dev",
-    "build:electron": "electron-builder --win",
-    "build:all": "electron-builder --win --mac --linux",
-    "dist": "npm run build:electron",
-    "pack": "electron-builder --dir",
-    "postinstall": "electron-builder install-app-deps"
+    "build:ts": "tsc -p tsconfig.json",
+    "pack": "npm run install:browsers && npm run prepare-build && electron-builder --dir",
+    "build:electron": "npm run install:browsers && npm run prepare-build && electron-builder --win",
+    "postinstall": "electron-builder install-app-deps",
+    "scheduler:start": "node dist/scheduler/SchedulerExecutor.js"
   },
   "keywords": [
     "playwright",
@@ -31,21 +29,19 @@
   "dependencies": {
     "@playwright/test": "^1.54.2",
     "dotenv": "^17.2.1",
-    "electron-store": "^8.1.0",
     "open": "^10.2.0",
     "simple-statistics": "^7.8.8",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.9.2"
+    "util": "^0.12.5"
   },
   "devDependencies": {
     "@types/node": "^24.2.1",
-    "allure-commandline": "^2.34.1",
-    "allure-playwright": "^3.3.3",
     "electron": "^27.0.0",
-    "electron-builder": "^24.6.4"
+    "electron-builder": "^24.6.4",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.2"
   },
   "build": {
-    "appId": "com.company.performance-framework",
+    "appId": "com.performance-framework",
     "productName": "Performance Testing Framework",
     "directories": {
       "output": "dist",
@@ -53,30 +49,35 @@
     },
     "files": [
       "electron/**/*",
-      "src/**/*",
-      "package.json",
-      "playwright.config.ts",
-      "tsconfig.json",
-      ".env",
-      "!node_modules/.cache",
-      "!**/.git",
-      "!**/node_modules/*/{test,__tests__,tests,powered-test,example,examples}",
-      "!**/node_modules/*.d.ts",
-      "!**/node_modules/.bin"
+      "dist/**/*",
+      "package.json"
     ],
-    "extraResources": [
+    "extraFiles": [
       {
-        "from": "src",
-        "to": "src"
+        "from": "src/tests",
+        "to": "resources/src/tests"
       },
       {
-        "from": "playwright.config.ts",
-        "to": "playwright.config.ts"
+        "from": "src/data-driven",
+        "to": "resources/src/data-driven"
       },
       {
         "from": ".env",
-        "to": ".env"
+        "to": "resources/.env"
+      },
+      {
+        "from": "playwright.config.ts",
+        "to": "resources/playwright.config.ts"
+      },
+      {
+        "from": "browsers",
+        "to": "browsers"
       }
+    ],
+    "asarUnpack": [
+      "node_modules/@playwright/**/*",
+      "node_modules/playwright/**/*",
+      "node_modules/playwright-core/**/*"
     ],
     "nsis": {
       "oneClick": false,
@@ -85,9 +86,7 @@
       "deleteAppDataOnUninstall": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Pruebas de Latencia",
-      "installerIcon": "build/icon.ico",
-      "uninstallerIcon": "build/icon.ico"
+      "shortcutName": "Pruebas de Latencia"
     },
     "win": {
       "target": [
@@ -96,20 +95,18 @@
           "arch": [
             "x64"
           ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
         }
       ],
-      "icon": "build/icon.ico",
-      "publisherName": "INDRA"
+      "publisherName": "INDRA",
+      "requestedExecutionLevel": "asInvoker",
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
     },
-    "mac": {
-      "target": "dmg",
-      "icon": "build/icon.icns",
-      "category": "public.app-category.developer-tools"
-    },
-    "linux": {
-      "target": "AppImage",
-      "icon": "build/icon.png",
-      "category": "Development"
-    }
+    "publish": null
   }
 }

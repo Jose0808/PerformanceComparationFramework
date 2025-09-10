@@ -4,377 +4,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Playwright Test Runner - Editor de Datos</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: #333;
-            height: 100vh;
-            overflow: hidden;
-        }
-
-        .container {
-            display: flex;
-            height: 100vh;
-        }
-
-        .sidebar {
-            width: 320px;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            padding: 20px;
-            border-right: 1px solid rgba(255, 255, 255, 0.2);
-            overflow-y: auto;
-        }
-
-        .main-content {
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto;
-        }
-
-        .logo {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        .logo h1 {
-            font-size: 22px;
-            color: #667eea;
-            margin-bottom: 5px;
-        }
-
-        .logo p {
-            font-size: 12px;
-            color: #666;
-        }
-
-        .nav-button {
-            width: 100%;
-            padding: 12px;
-            margin: 8px 0;
-            border: none;
-            border-radius: 8px;
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            color: white;
-            font-size: 14px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .nav-button:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-        }
-
-        .nav-button.secondary {
-            background: linear-gradient(45deg, #43a047, #66bb6a);
-        }
-
-        .nav-button.tertiary {
-            background: linear-gradient(45deg, #ff7043, #ffab40);
-        }
-
-        .nav-button.quaternary {
-            background: linear-gradient(45deg, #9c27b0, #e1bee7);
-        }
-
-        .content-card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 15px;
-            padding: 25px;
-            margin: 15px 0;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-        }
-
-        .status-indicator {
-            display: inline-block;
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            margin-right: 8px;
-        }
-
-        .status-ok {
-            background: #4caf50;
-        }
-
-        .status-error {
-            background: #f44336;
-        }
-
-        .status-warning {
-            background: #ff9800;
-        }
-
-        .status-loading {
-            background: #2196f3;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-
-            0%,
-            100% {
-                opacity: 1;
-            }
-
-            50% {
-                opacity: 0.5;
-            }
-        }
-
-        .console-output {
-            background: #1e1e1e;
-            color: #ffffff;
-            font-family: 'Courier New', monospace;
-            padding: 15px;
-            border-radius: 8px;
-            height: 250px;
-            overflow-y: auto;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            font-size: 12px;
-        }
-
-        .system-check {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 0;
-            border-bottom: 1px solid #eee;
-            font-size: 14px;
-        }
-
-        .hidden {
-            display: none;
-        }
-
-        .action-buttons {
-            display: flex;
-            gap: 12px;
-            margin-top: 15px;
-            flex-wrap: wrap;
-        }
-
-        .btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 6px;
-            font-size: 13px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .btn-primary {
-            background: #667eea;
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background: #5a6fd8;
-        }
-
-        .btn-secondary {
-            background: #f5f5f5;
-            color: #333;
-            border: 1px solid #ddd;
-        }
-
-        .btn-secondary:hover {
-            background: #e8e8e8;
-        }
-
-        .btn-success {
-            background: #4caf50;
-            color: white;
-        }
-
-        .btn-danger {
-            background: #f44336;
-            color: white;
-        }
-
-        .btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        /* Estilos para el editor de datos */
-        .data-files-list {
-            max-height: 200px;
-            overflow-y: auto;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            margin: 15px 0;
-        }
-
-        .file-item {
-            padding: 12px;
-            border-bottom: 1px solid #eee;
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            transition: background 0.2s;
-        }
-
-        .file-item:hover {
-            background: #f8f9fa;
-        }
-
-        .file-item.selected {
-            background: #e3f2fd;
-            border-left: 4px solid #2196f3;
-        }
-
-        .file-info {
-            display: flex;
-            flex-direction: column;
-            flex: 1;
-        }
-
-        .file-name {
-            font-weight: 500;
-            color: #333;
-        }
-
-        .file-size {
-            font-size: 11px;
-            color: #666;
-        }
-
-        .json-editor {
-            background: #f8f9fa;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            padding: 15px;
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-            min-height: 300px;
-            resize: vertical;
-            width: 100%;
-        }
-
-        .env-editor {
-            display: grid;
-            gap: 10px;
-            margin: 15px 0;
-        }
-
-        .env-var {
-            display: grid;
-            grid-template-columns: 150px 1fr auto;
-            gap: 10px;
-            align-items: center;
-            padding: 8px;
-            background: #f8f9fa;
-            border-radius: 4px;
-        }
-
-        .env-input {
-            padding: 6px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 12px;
-        }
-
-        .tab-buttons {
-            display: flex;
-            gap: 5px;
-            margin-bottom: 20px;
-        }
-
-        .tab-button {
-            padding: 8px 16px;
-            border: none;
-            background: #f0f0f0;
-            cursor: pointer;
-            border-radius: 4px 4px 0 0;
-            font-size: 12px;
-        }
-
-        .tab-button.active {
-            background: #667eea;
-            color: white;
-        }
-
-        .success-message {
-            background: #e8f5e8;
-            color: #2e7d32;
-            padding: 12px;
-            border-radius: 6px;
-            border-left: 4px solid #4caf50;
-            margin: 10px 0;
-            font-size: 13px;
-        }
-
-        .error-message {
-            background: #ffebee;
-            color: #c62828;
-            padding: 12px;
-            border-radius: 6px;
-            border-left: 4px solid #f44336;
-            margin: 10px 0;
-            font-size: 13px;
-        }
-
-        .editor-toolbar {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 15px;
-            padding: 10px;
-            background: #f8f9fa;
-            border-radius: 6px;
-            border: 1px solid #ddd;
-        }
-
-        .two-column {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
-
-        @media (max-width: 1200px) {
-            .two-column {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .file-explorer {
-            max-height: 400px;
-            overflow-y: auto;
-        }
-
-        .warning-box {
-            background: #fff3cd;
-            border: 1px solid #ffeaa7;
-            color: #856404;
-            padding: 12px;
-            border-radius: 6px;
-            margin: 10px 0;
-            font-size: 13px;
-        }
-    </style>
+    <title>Latency Test Runner</title>
+    <link rel="stylesheet" href="index.css">
 </head>
 
 <body>
     <div class="container">
         <div class="sidebar">
             <div class="logo">
-                <h1>🎭 Playwright Runner</h1>
-                <p>Editor de Datos y Pruebas</p>
+                <h1>🎭 Latency Runner</h1>
+                <p>Pruebas automatizadas de latencia</p>
             </div>
 
             <button class="nav-button" onclick="showSection('home')">
@@ -386,7 +25,7 @@
             </button>
 
             <button class="nav-button quaternary" onclick="showSection('env-editor')">
-                <span>🔧</span> Variables (.env)
+                <span>🔧</span> Variables Globales
             </button>
 
             <button class="nav-button secondary" onclick="showSection('run-ui')">
@@ -395,6 +34,10 @@
 
             <button class="nav-button secondary" onclick="showSection('run-auto')">
                 <span>🚀</span> Ejecutar Pruebas
+            </button>
+
+            <button class="nav-button secondary" disabled onclick="showSection('scheduler')">
+                <span>📅</span> Planificador (Desarrollo)
             </button>
 
             <button class="nav-button tertiary" onclick="showSection('reports')">
@@ -588,9 +231,9 @@
                         <button class="btn btn-secondary" onclick="clearTestConsole()">
                             🗑️ Limpiar Consola
                         </button>
-                        <button class="btn btn-secondary" onclick="stopTests()" id="stop-tests-btn" disabled>
+                        <!-- <button class="btn btn-secondary" onclick="stopTests()" id="stop-tests-btn" disabled>
                             ⏹️ Detener
-                        </button>
+                        </button> -->
                     </div>
 
                     <div class="console-output" id="test-console">
@@ -598,6 +241,125 @@
                         <div>📊 Los resultados aparecerán aquí en tiempo real.</div>
                         <div></div>
                         <div>Haga clic en "Ejecutar Todas las Pruebas" para comenzar.</div>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- ===== PLANIFICADOR ===== -->
+            <div id="scheduler-section" class="content-section hidden">
+                <div class="content-card scheduler-container">
+                    <!-- Status Panel -->
+                    <div class="status-panel">
+                        <h3>Estado del Scheduler</h3>
+                        <div id="scheduler-status">
+                            <div class="status-item">
+                                <span class="status-label">Estado:</span>
+                                <span id="status-text" class="status-inactive">Inactivo</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">Próxima ejecución:</span>
+                                <span id="next-execution">-</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">Última ejecución:</span>
+                                <span id="last-execution">-</span>
+                            </div>
+                        </div>
+
+                        <div class="status-controls">
+                            <button id="pause-scheduler" class="btn btn-danger">Pausar Todo</button>
+                            <button id="resume-scheduler" class="btn btn-success">Reanudar Todo</button>
+                            <button id="refresh-status" class="btn btn-secondary">Actualizar</button>
+                        </div>
+                    </div>
+
+                    <!-- Profile Management -->
+                    <div class="profile-panel">
+                        <h3>Perfiles de Ejecución</h3>
+                        <button id="create-profile-btn" class="btn btn-primary">Crear Nuevo Perfil</button>
+
+                        <div id="profiles-list">
+                            <!-- Se llena dinámicamente -->
+                        </div>
+                    </div>
+
+                    <!-- Execution History -->
+                    <div class="history-panel">
+                        <h3>Historial de Ejecuciones</h3>
+                        <div class="history-controls">
+                            <select id="history-days">
+                                <option value="1">Último día</option>
+                                <option value="7" selected>Última semana</option>
+                                <option value="30">Último mes</option>
+                            </select>
+                            <button id="refresh-history" class="btn btn-secondary">Actualizar</button>
+                        </div>
+
+                        <div id="execution-history">
+                            <!-- Se llena dinámicamente -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal para crear/editar perfil -->
+                <div id="profile-modal" class="modal" style="display: none;">
+                    <div class="modal-content">
+                        <span class="close">&times;</span>
+                        <h3>Configurar Perfil de Scheduler</h3>
+
+                        <form id="profile-form" type="submit">
+                            <div class="form-group">
+                                <label>Nombre del perfil:</label>
+                                <input type="text" id="profile-name" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Descripción:</label>
+                                <input type="text" id="profile-description">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Ejecutar cada (minutos):</label>
+                                <input type="number" id="interval-minutes" min="5" max="1440" value="15">
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Hora inicio:</label>
+                                    <input type="time" id="start-time" value="08:00">
+                                </div>
+                                <div class="form-group">
+                                    <label>Hora fin:</label>
+                                    <input type="time" id="end-time" value="18:00">
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Días de la semana:</label>
+                                <div class="checkbox-group">
+                                    <label><input name="days" type="checkbox" value="1" checked> Lunes</label>
+                                    <label><input name="days" type="checkbox" value="2" checked> Martes</label>
+                                    <label><input name="days" type="checkbox" value="3" checked> Miércoles</label>
+                                    <label><input name="days" type="checkbox" value="4" checked> Jueves</label>
+                                    <label><input name="days" type="checkbox" value="5" checked> Viernes</label>
+                                    <label><input name="days" type="checkbox" value="6"> Sábado</label>
+                                    <label><input name="days" type="checkbox" value="0"> Domingo</label>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Tests a ejecutar:</label>
+                                <div class="checkbox-group" id="testsContainer">
+                                </div>
+                            </div>
+
+                            <div class="form-actions">
+                                <button type="button" class="btn" id="cancel-profile">Cancelar</button>
+                                <button type="button" class="btn btn-primary" id="submit-profile"
+                                    onclick="saveProfile()">Guardar Perfil</button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             </div>
@@ -634,681 +396,8 @@
             </div>
         </div>
     </div>
+    <script src="index.js"></script>
 
-    <script>
-        const { ipcRenderer } = require('electron');
-        const fs = require('fs');
-        const path = require('path');
-
-        // Variables globales
-        let currentSection = 'home';
-        let currentDataFile = null;
-        let currentEnvData = {};
-        let projectPaths = {};
-        let isTestRunning = false;
-
-        // ======================== NAVEGACIÓN ========================
-        function showSection(sectionName) {
-            document.querySelectorAll('.content-section').forEach(section => {
-                section.classList.add('hidden');
-            });
-
-            document.getElementById(sectionName + '-section').classList.remove('hidden');
-            currentSection = sectionName;
-
-            // Acciones específicas por sección
-            if (sectionName === 'home') {
-                verifyInstallation();
-            } else if (sectionName === 'data-editor') {
-                loadDataFiles();
-            } else if (sectionName === 'env-editor') {
-                loadEnvFile();
-            }
-        }
-
-        // ======================== VERIFICACIÓN DEL SISTEMA ========================
-        async function verifyInstallation() {
-            try {
-                const result = await ipcRenderer.invoke('verify-installation');
-
-                if (result.success) {
-                    updateSystemStatus(result.checks);
-                    updateProjectSummary(result.checks);
-                    projectPaths = result.paths;
-                } else {
-                    console.error('Verification failed:', result.error);
-                }
-            } catch (error) {
-                console.error('Error during verification:', error);
-            }
-        }
-
-        function updateSystemStatus(checks) {
-            // Verificar Node.js
-            const nodeCheck = ipcRenderer.invoke('check-node');
-            updateStatus('node-status', nodeCheck.installed,
-                nodeCheck.installed ? `Instalado ${nodeCheck.version}` : 'No instalado');
-
-            updateStatus('config-status', checks.playwrightConfig?.exists,
-                checks.playwrightConfig?.exists ? 'Configurado' : 'Faltante');
-
-            updateStatus('tests-status', checks['src/tests']?.exists,
-                checks['src/tests']?.exists ? `${checks.testFilesCount || 0} archivos` : 'No encontrado');
-
-            updateStatus('data-status', checks['src/data-driven']?.exists,
-                checks['src/data-driven']?.exists ? `${checks.dataFilesCount || 0} archivos JSON` : 'No encontrado');
-
-            updateStatus('env-status', checks['.env']?.exists,
-                checks['.env']?.exists ? 'Configurado' : 'Faltante');
-
-            updateStatus('deps-status', checks.nodeModules?.exists,
-                checks.nodeModules?.exists ? 'Instaladas' : 'Faltantes');
-        }
-
-        function updateStatus(elementId, isOk, message) {
-            const element = document.getElementById(elementId);
-            if (element) {
-                const statusClass = isOk ? 'status-ok' : 'status-error';
-                element.innerHTML = `<span class="status-indicator ${statusClass}"></span>${message}`;
-            }
-        }
-
-        function updateProjectSummary(checks) {
-            const summaryDiv = document.getElementById('project-summary');
-            let html = '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">';
-
-            html += `
-                <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; text-align: center;">
-                    <h4>🧪 Tests Disponibles</h4>
-                    <div style="font-size: 24px; font-weight: bold; color: #1976d2;">${checks.testFilesCount || 0}</div>
-                </div>
-                <div style="background: #f3e5f5; padding: 15px; border-radius: 8px; text-align: center;">
-                    <h4>📄 Archivos de Datos</h4>
-                    <div style="font-size: 24px; font-weight: bold; color: #7b1fa2;">${checks.dataFilesCount || 0}</div>
-                </div>
-                <div style="background: #e8f5e8; padding: 15px; border-radius: 8px; text-align: center;">
-                    <h4>✅ Sistema</h4>
-                    <div style="font-size: 16px; font-weight: bold; color: #2e7d32;">
-                        ${Object.values(checks).filter(c => c.exists).length}/${Object.keys(checks).length} OK
-                    </div>
-                </div>
-            `;
-
-            html += '</div>';
-            summaryDiv.innerHTML = html;
-        }
-
-        // ======================== EDITOR DE DATOS JSON ========================
-        async function loadDataFiles() {
-            try {
-                const result = await ipcRenderer.invoke('list-data-files');
-
-                if (result.success) {
-                    displayDataFiles(result.files);
-                } else {
-                    document.getElementById('data-files-list').innerHTML =
-                        `<div style="padding: 20px; color: #f44336;">Error: ${result.error}</div>`;
-                }
-            } catch (error) {
-                console.error('Error loading data files:', error);
-            }
-        }
-
-        function displayDataFiles(files) {
-            const listDiv = document.getElementById('data-files-list');
-
-            if (files.length === 0) {
-                listDiv.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">No hay archivos JSON en src/data-driven</div>';
-                return;
-            }
-
-            let html = '';
-            files.forEach((file, index) => {
-                html += `
-                    <div class="file-item" onclick="selectDataFile('${file.name}')" data-filename="${file.name}">
-                        <div class="file-info">
-                            <div class="file-name">📄 ${file.name}</div>
-                            <div class="file-size">${(file.size / 1024).toFixed(1)} KB</div>
-                        </div>
-                        
-                    </div>
-                `;
-                // <button onclick="event.stopPropagation(); deleteDataFile('${file.name}')" 
-                //         style="background: #f44336; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer;">🗑️</button>
-            });
-
-            listDiv.innerHTML = html;
-        }
-
-        async function selectDataFile(filename) {
-            // Limpiar selección anterior
-            document.querySelectorAll('.file-item').forEach(item => {
-                item.classList.remove('selected');
-            });
-
-            // Seleccionar el nuevo
-            document.querySelector(`[data-filename="${filename}"]`).classList.add('selected');
-
-            try {
-                const result = await ipcRenderer.invoke('read-data-file', filename);
-
-                if (result.success) {
-                    currentDataFile = filename;
-                    const jsonEditor = document.getElementById('json-editor');
-                    jsonEditor.value = JSON.stringify(result.data, null, 2);
-                    document.getElementById('save-json-btn').disabled = false;
-
-                    // Mostrar información del archivo
-                    document.getElementById('json-status').innerHTML =
-                        `<span style="color: #4caf50;">✅ Archivo cargado: ${filename}</span>`;
-
-                    // Buscar tests relacionados
-                    findRelatedTests(filename);
-                } else {
-                    showMessage('error', `Error al cargar ${filename}: ${result.error}`);
-                }
-            } catch (error) {
-                console.error('Error selecting data file:', error);
-            }
-        }
-
-        async function saveCurrentFile() {
-            if (!currentDataFile) return;
-
-            try {
-                const jsonEditor = document.getElementById('json-editor');
-                const jsonData = JSON.parse(jsonEditor.value);
-
-                const result = await ipcRenderer.invoke('save-data-file', currentDataFile, jsonData);
-
-                if (result.success) {
-                    showMessage('success', `✅ ${currentDataFile} guardado correctamente`);
-                } else {
-                    showMessage('error', `❌ Error al guardar: ${result.error}`);
-                }
-            } catch (error) {
-                showMessage('error', `❌ JSON inválido: ${error.message}`);
-            }
-        }
-
-        function validateJson() {
-            try {
-                const jsonEditor = document.getElementById('json-editor');
-                JSON.parse(jsonEditor.value);
-                document.getElementById('json-status').innerHTML =
-                    '<span style="color: #4caf50;">✅ JSON válido</span>';
-            } catch (error) {
-                document.getElementById('json-status').innerHTML =
-                    `<span style="color: #f44336;">❌ Error: ${error.message}</span>`;
-            }
-        }
-
-        function formatJson() {
-            try {
-                const jsonEditor = document.getElementById('json-editor');
-                const parsed = JSON.parse(jsonEditor.value);
-                jsonEditor.value = JSON.stringify(parsed, null, 2);
-                document.getElementById('json-status').innerHTML =
-                    '<span style="color: #4caf50;">✅ JSON formateado</span>';
-            } catch (error) {
-                showMessage('error', `❌ No se puede formatear: ${error.message}`);
-            }
-        }
-
-        async function createNewDataFile() {
-            const filename = prompt('Nombre del nuevo archivo (sin .json):');
-            if (!filename) return;
-
-            const fullFilename = filename.endsWith('.json') ? filename : filename + '.json';
-
-            const initialData = {
-                "testName": filename.replace('.json', ''),
-                "description": "Datos de prueba generados automáticamente",
-                "testData": [
-                    {
-                        "id": 1,
-                        "name": "Caso de prueba 1",
-                        "url": "https://example.com",
-                        "expected": "resultado esperado"
-                    }
-                ]
-            };
-
-            try {
-                const result = await ipcRenderer.invoke('create-data-file', fullFilename, initialData);
-
-                if (result.success) {
-                    showMessage('success', `✅ Archivo ${fullFilename} creado`);
-                    loadDataFiles();
-                } else {
-                    showMessage('error', `❌ Error: ${result.error}`);
-                }
-            } catch (error) {
-                showMessage('error', `❌ Error al crear archivo: ${error.message}`);
-            }
-        }
-
-        async function findRelatedTests(dataFilename) {
-            try {
-                const result = await ipcRenderer.invoke('list-test-files');
-
-                if (result.success) {
-                    const relatedTests = [];
-
-                    for (const testFile of result.testFiles) {
-                        const analysis = await ipcRenderer.invoke('analyze-test-file', testFile.fullPath);
-                        if (analysis.success) {
-                            const isRelated = analysis.jsonReferences.some(ref => {
-                                console.log(ref.file.includes(dataFilename));
-                                console.log(dataFilename.includes(path.basename(ref.file)));
-                                console.log(path.basename(ref.file));
-                                console.log(ref.file.includes(dataFilename) || dataFilename.includes(path.basename(ref.file)));
-                                return ref.file.includes(dataFilename) || dataFilename.includes(path.basename(ref.file))
-                            }
-                            );
-                            debugger;
-
-                            if (isRelated) {
-                                relatedTests.push(testFile.name);
-                            }
-                        }
-                    }
-
-                    const relationDiv = document.getElementById('test-relation');
-                    const testsDiv = document.getElementById('related-tests');
-
-                    if (relatedTests.length > 0) {
-                        testsDiv.innerHTML = relatedTests.map(test => `• ${test}`).join('<br>');
-                        relationDiv.classList.remove('hidden');
-                    } else {
-                        testsDiv.innerHTML = 'No se encontraron tests relacionados';
-                        relationDiv.classList.remove('hidden');
-                    }
-                }
-            } catch (error) {
-                console.error('Error finding related tests:', error);
-            }
-        }
-
-        // ======================== EDITOR DE .ENV ========================
-        async function loadEnvFile() {
-            try {
-                const result = await ipcRenderer.invoke('read-env-file');
-
-                if (result.success) {
-                    currentEnvData = result.variables;
-                    displayEnvEditor(result.variables);
-                    showMessage('success', '✅ Archivo .env cargado correctamente');
-                } else {
-                    showMessage('error', `❌ Error al cargar .env: ${result.error}`);
-                    // Crear un .env vacío para empezar
-                    currentEnvData = {};
-                    displayEnvEditor({});
-                }
-            } catch (error) {
-                console.error('Error loading env file:', error);
-                showMessage('error', 'Error inesperado al cargar el archivo .env');
-            }
-        }
-
-        function displayEnvEditor(envVars) {
-            const editorDiv = document.getElementById('env-editor');
-
-            let html = '';
-
-            Object.entries(envVars).forEach(([key, value]) => {
-                html += `
-                    <div class="env-var">
-                        <input type="text" class="env-input" value="${key}" onchange="updateEnvKey(this, '${key}')" placeholder="VARIABLE_NAME" disabled>
-                        <input type="text" class="env-input" value="${value}" onchange="updateEnvValue('${key}', this.value)" placeholder="valor">
-                    </div>
-                `;
-                // <button onclick="removeEnvVar('${key}')" style="background: #f44336; color: white; border: none; padding: 6px; border-radius: 3px; cursor: pointer;">🗑️</button>
-
-            });
-
-            // Si no hay variables, mostrar mensaje
-            if (Object.keys(envVars).length === 0) {
-                html = `
-                    <div style="text-align: center; padding: 30px; color: #666;">
-                        <p>📝 No hay variables de entorno configuradas</p>
-                        <p style="margin-top: 10px;">Haga clic en "Agregar Variable" para comenzar</p>
-                    </div>
-                `;
-            }
-
-            editorDiv.innerHTML = html;
-        }
-
-        function addEnvVariable() {
-            const key = prompt('Nombre de la variable (ej: BASE_URL):');
-            if (!key) return;
-
-            const value = prompt('Valor de la variable:') || '';
-
-            currentEnvData[key.toUpperCase()] = value;
-            displayEnvEditor(currentEnvData);
-        }
-
-        function updateEnvKey(input, oldKey) {
-            const newKey = input.value.toUpperCase();
-            if (newKey !== oldKey) {
-                currentEnvData[newKey] = currentEnvData[oldKey];
-                delete currentEnvData[oldKey];
-                displayEnvEditor(currentEnvData);
-            }
-        }
-
-        function updateEnvValue(key, newValue) {
-            currentEnvData[key] = newValue;
-        }
-
-        function removeEnvVar(key) {
-            if (confirm(`¿Eliminar la variable ${key}?`)) {
-                delete currentEnvData[key];
-                displayEnvEditor(currentEnvData);
-            }
-        }
-
-        async function saveEnvFile() {
-            try {
-                const result = await ipcRenderer.invoke('save-env-file', currentEnvData);
-
-                if (result.success) {
-                    showMessage('success', '✅ Archivo .env guardado correctamente');
-                } else {
-                    showMessage('error', `❌ Error al guardar .env: ${result.error}`);
-                }
-            } catch (error) {
-                console.error('Error saving env file:', error);
-                showMessage('error', 'Error inesperado al guardar el archivo .env');
-            }
-        }
-
-        // ======================== EJECUCIÓN DE PRUEBAS ========================
-        async function runTestsUI() {
-            const btn = document.getElementById('run-ui-btn');
-            btn.disabled = true;
-            btn.textContent = 'Abriendo UI...';
-
-            try {
-                const result = await ipcRenderer.invoke('run-tests-ui');
-
-                if (result.success) {
-                    document.getElementById('ui-instructions').classList.remove('hidden');
-                    showMessage('success', '🎮 Playwright UI iniciado correctamente');
-                } else {
-                    showMessage('error', `❌ Error: ${result.error || result.output}`);
-                }
-            } catch (error) {
-                console.error('Error running UI tests:', error);
-                showMessage('error', `❌ Error inesperado: ${error.message}`);
-            }
-
-            btn.disabled = false;
-            btn.textContent = '🎮 Abrir Modo Interactivo';
-        }
-
-        async function runAllTests() {
-            if (isTestRunning) return;
-
-            const btn = document.getElementById('run-tests-btn');
-            const stopBtn = document.getElementById('stop-tests-btn');
-            const console = document.getElementById('test-console');
-
-            isTestRunning = true;
-            btn.disabled = true;
-            stopBtn.disabled = false;
-            btn.textContent = 'Ejecutando...';
-            console.textContent = '';
-
-            addTestConsoleText('🚀 Iniciando ejecución de todas las pruebas...\n');
-            addTestConsoleText('⏳ Por favor espere, esto puede tomar varios minutos...\n\n');
-
-            try {
-                const result = await ipcRenderer.invoke('run-tests');
-
-                addTestConsoleText('\n' + '='.repeat(50) + '\n');
-
-                if (result.success) {
-                    addTestConsoleText('🎉 ¡PRUEBAS COMPLETADAS EXITOSAMENTE!\n\n');
-                    addTestConsoleText('📊 Resumen:\n');
-                    addTestConsoleText('   • Todas las pruebas pasaron\n');
-                    addTestConsoleText('   • Reportes generados correctamente\n');
-                    addTestConsoleText('   • Puede ver los detalles en "Ver Reportes"\n\n');
-                } else {
-                    addTestConsoleText('⚠️ PRUEBAS COMPLETADAS CON ERRORES\n\n');
-                    addTestConsoleText('📊 Resumen:\n');
-                    addTestConsoleText('   • Algunas pruebas fallaron\n');
-                    addTestConsoleText('   • Revise el reporte HTML para detalles\n');
-                    addTestConsoleText('   • Capturas de pantalla disponibles\n\n');
-                }
-
-                addTestConsoleText('🔗 Próximos pasos:\n');
-                addTestConsoleText('   1. Ir a "Ver Reportes" → "Abrir Reporte HTML"\n');
-                addTestConsoleText('   2. Revisar capturas de pantalla y videos\n');
-                addTestConsoleText('   3. Modificar datos si es necesario\n');
-
-            } catch (error) {
-                addTestConsoleText(`❌ ERROR CRÍTICO: ${error.message}\n`);
-                addTestConsoleText('🔧 Posibles soluciones:\n');
-                addTestConsoleText('   • Verificar que todas las dependencias estén instaladas\n');
-                addTestConsoleText('   • Comprobar la configuración de Playwright\n');
-                addTestConsoleText('   • Revisar los archivos de datos JSON\n');
-            }
-
-            isTestRunning = false;
-            btn.disabled = false;
-            stopBtn.disabled = true;
-            btn.textContent = '🚀 Ejecutar Todas las Pruebas';
-        }
-
-        function verifyBeforeRun() {
-            verifyInstallation();
-            showMessage('info', '🔍 Verificación completa. Revise el Dashboard para más detalles.');
-        }
-
-        function clearTestConsole() {
-            document.getElementById('test-console').textContent = '';
-        }
-
-        function stopTests() {
-            // Esta función requeriría implementación adicional en el main process
-            showMessage('warning', '⚠️ Función de detener en desarrollo');
-        }
-
-        // ======================== REPORTES ========================
-        async function showHtmlReport() {
-            try {
-                const result = await ipcRenderer.invoke('show-report');
-
-                if (!result.success) {
-                    showMessage('warning', '⚠️ No se encontraron reportes. Ejecute las pruebas primero.');
-                }
-            } catch (error) {
-                showMessage('error', `❌ Error al abrir reportes: ${error.message}`);
-            }
-        }
-
-        async function openReportsFolder() {
-            try {
-                await ipcRenderer.invoke('open-reports-folder');
-            } catch (error) {
-                showMessage('error', `❌ Error al abrir carpeta de reportes: ${error.message}`);
-            }
-        }
-
-        async function openProjectFolder() {
-            try {
-                await ipcRenderer.invoke('open-project-folder');
-            } catch (error) {
-                showMessage('error', `❌ Error al abrir carpeta del proyecto: ${error.message}`);
-            }
-        }
-
-        // ======================== UTILIDADES ========================
-        function refreshDataFiles() {
-            loadDataFiles();
-            showMessage('info', '🔄 Lista de archivos actualizada');
-        }
-
-        async function deleteDataFile(filename) {
-            if (!confirm(`¿Está seguro de eliminar ${filename}?`)) return;
-
-            // Esta función requiere implementación en el main process
-            showMessage('warning', '🚧 Función de eliminar en desarrollo');
-        }
-
-        function showMessage(type, message) {
-            // Crear elemento de mensaje temporal
-            const messageDiv = document.createElement('div');
-            messageDiv.className = type === 'success' ? 'success-message' :
-                type === 'error' ? 'error-message' : 'warning-box';
-            messageDiv.innerHTML = message;
-            messageDiv.style.position = 'fixed';
-            messageDiv.style.top = '20px';
-            messageDiv.style.right = '20px';
-            messageDiv.style.zIndex = '9999';
-            messageDiv.style.maxWidth = '400px';
-
-            document.body.appendChild(messageDiv);
-
-            // Remover después de 3 segundos
-            setTimeout(() => {
-                if (messageDiv.parentNode) {
-                    messageDiv.parentNode.removeChild(messageDiv);
-                }
-            }, 3000);
-        }
-
-        function addTestConsoleText(text) {
-            const console = document.getElementById('test-console');
-            console.textContent += text;
-            console.scrollTop = console.scrollHeight;
-        }
-
-        // ======================== EVENT LISTENERS ========================
-
-        // Escuchar progreso de tests
-        ipcRenderer.on('test-output', (event, data) => {
-            addTestConsoleText(data);
-        });
-
-        // Escuchar cuando las rutas del proyecto estén listas
-        ipcRenderer.on('project-paths-ready', (event, paths) => {
-            projectPaths = paths;
-            console.log('Project paths received:', paths);
-        });
-
-        // Autoguardar en editor JSON cada 30 segundos
-        setInterval(() => {
-            if (currentDataFile && document.getElementById('json-editor').value) {
-                const jsonEditor = document.getElementById('json-editor');
-                try {
-                    JSON.parse(jsonEditor.value);
-                    // Solo autoguardar si el JSON es válido
-                    document.getElementById('json-status').innerHTML += ' 💾';
-                } catch (error) {
-                    // No autoguardar si hay errores
-                }
-            }
-        }, 30000);
-
-        // ======================== INICIALIZACIÓN ========================
-        window.addEventListener('DOMContentLoaded', () => {
-            console.log('Application starting...');
-            showSection('home');
-
-            // Verificar estado inicial
-            setTimeout(() => {
-                verifyInstallation();
-            }, 1000);
-        });
-
-        // Manejar errores globales
-        window.addEventListener('error', (event) => {
-            console.error('Global error:', event.error);
-            showMessage('error', `❌ Error de aplicación: ${event.error.message}`);
-        });
-
-        // ======================== FUNCIONES ADICIONALES PARA DATOS ========================
-
-        function duplicateCurrentFile() {
-            if (!currentDataFile) {
-                showMessage('warning', '⚠️ Seleccione un archivo primero');
-                return;
-            }
-
-            const newName = prompt(`Nuevo nombre para la copia de ${currentDataFile}:`);
-            if (!newName) return;
-
-            const fullNewName = newName.endsWith('.json') ? newName : newName + '.json';
-
-            try {
-                const jsonEditor = document.getElementById('json-editor');
-                const currentData = JSON.parse(jsonEditor.value);
-
-                // Modificar el nombre en los datos
-                if (currentData.testName) {
-                    currentData.testName = fullNewName.replace('.json', '');
-                }
-
-                ipcRenderer.invoke('create-data-file', fullNewName, currentData)
-                    .then(result => {
-                        if (result.success) {
-                            showMessage('success', `✅ Archivo duplicado: ${fullNewName}`);
-                            loadDataFiles();
-                        } else {
-                            showMessage('error', `❌ Error: ${result.error}`);
-                        }
-                    });
-
-            } catch (error) {
-                showMessage('error', '❌ Error al duplicar: JSON inválido');
-            }
-        }
-
-        // Función para exportar configuración completa
-        async function exportConfiguration() {
-            try {
-                const dataResult = await ipcRenderer.invoke('list-data-files');
-                const envResult = await ipcRenderer.invoke('read-env-file');
-
-                const config = {
-                    timestamp: new Date().toISOString(),
-                    dataFiles: dataResult.success ? dataResult.files.length : 0,
-                    envVariables: envResult.success ? Object.keys(envResult.variables).length : 0,
-                    environment: envResult.success ? envResult.variables : {}
-                };
-
-                console.log('Configuration export:', config);
-                showMessage('info', '📋 Configuración exportada a consola del desarrollador');
-            } catch (error) {
-                showMessage('error', '❌ Error al exportar configuración');
-            }
-        }
-
-        // ======================== TECLADO SHORTCUTS ========================
-        document.addEventListener('keydown', (event) => {
-            // Ctrl+S para guardar
-            if (event.ctrlKey && event.key === 's') {
-                event.preventDefault();
-                if (currentSection === 'data-editor' && currentDataFile) {
-                    saveCurrentFile();
-                } else if (currentSection === 'env-editor') {
-                    saveEnvFile();
-                }
-            }
-
-            // Ctrl+R para ejecutar pruebas
-            if (event.ctrlKey && event.key === 'r') {
-                event.preventDefault();
-                if (currentSection === 'run-auto') {
-                    runAllTests();
-                }
-            }
-        });
-    </script>
 </body>
 
 </html>

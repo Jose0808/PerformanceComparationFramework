@@ -1,19 +1,29 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "commonjs",
-    "lib": ["ES2022", "DOM"],
-    "outDir": "./dist",
-    "rootDir": "./src",
+    "target": "ES2022",                       
+    "module": "CommonJS",                     
+    "lib": ["ES2022", "DOM"],                 
+    "outDir": "./dist",                       
+    "rootDir": "./",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false
   },
-  "include": ["src/**/*", "data/**/*"],
-  "exclude": ["node_modules", "dist", "allure-results", "reports"]
+  "include": [
+    "src/**/*",
+    "electron/**/*",
+    "package.json",
+    "playwright.config.ts",
+    ".env"
+, "src/scripts"  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "reports"
+  ]
 }

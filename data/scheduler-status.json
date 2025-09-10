@@ -1,0 +1,55 @@
+{
+  "isRunning": true,
+  "currentProfile": {
+    "id": "profile_1757101369243_2hren1nb2",
+    "name": "Nuevo",
+    "description": "Nuevo",
+    "schedule": {
+      "intervalMinutes": 5,
+      "startTime": "08:00",
+      "endTime": "18:00",
+      "daysOfWeek": [
+        5
+      ]
+    },
+    "tests": [
+      "login.spec.ts"
+    ],
+    "enabled": true,
+    "createdAt": "2025-09-05T19:42:49.243Z",
+    "updatedAt": "2025-09-05T19:42:49.243Z"
+  },
+  "nextExecution": "2025-09-12T13:00:00.000Z",
+  "taskSchedulerTaskName": "LatencyMonitor_profile_1757101369243_2hren1nb2",
+  "lastHeartbeat": "2025-09-05T22:18:00.316Z",
+  "lastExecution": {
+    "id": "exec_profile_1757101369243_2hren1nb2_1757110636633",
+    "profileId": "profile_1757101369243_2hren1nb2",
+    "timestamp": "2025-09-05T22:17:16.633Z",
+    "startTime": "2025-09-05T22:17:16.668Z",
+    "endTime": "2025-09-05T22:18:00.305Z",
+    "duration": 43637,
+    "status": "success",
+    "metadata": {
+      "schedulerVersion": "1.0.0",
+      "playwrightVersion": "^1.54.2",
+      "nodeVersion": "v20.11.0",
+      "systemInfo": {
+        "platform": "win32",
+        "arch": "x64",
+        "totalMemory": 16794460160,
+        "freeMemory": 4773625856,
+        "cpuUsage": 0
+      },
+      "networkInfo": {}
+    }
+  },
+  "statistics": {
+    "totalExecutions": 9,
+    "successfulExecutions": 1,
+    "failedExecutions": 8,
+    "averageExecutionTime": 33.24644444444444,
+    "uptimePercentage": 11.11111111111111,
+    "lastResetDate": "2025-09-05T21:33:28.474Z"
+  }
+}

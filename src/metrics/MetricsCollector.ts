@@ -1,23 +1,16 @@
 import { Page } from '@playwright/test';
 import { ConfigManager } from '../config/ConfigManager';
 
-export interface NetworkRequest {
-  type: 'request';
+export interface NetworkLog {
   url: string;
+  urlName: string;
   method: string;
   headers: Record<string, string>;
-  timestamp: number;
+  requestTimestamp: number;
+  status?: number;
+  duration?: number;
+  curl?: string;
 }
-
-export interface NetworkResponse {
-  type: 'response';
-  url: string;
-  method: string;
-  status: number;
-  duration: number;
-}
-
-export type NetworkLog = NetworkRequest | NetworkResponse;
 
 
 export interface PerformanceMetrics {
@@ -72,6 +65,7 @@ export class MetricsCollector {
   private networkLogs: NetworkLog[] = [];
   private jsErrors: string[] = [];
 
+
   constructor(page: Page) {
     this.page = page;
     this.config = ConfigManager.getInstance();
@@ -96,38 +90,47 @@ export class MetricsCollector {
 
     // Network monitoring
     if (this.config.monitoring.captureNetworkLogs) {
-      const requestTimes = new Map<string, number>();
+      const requestMap = new Map<string, NetworkLog>();
 
       this.page.on('request', (request) => {
-        requestTimes.set(request.url(), Date.now());
+        const now = performance.now();
+        const key = `${request.url()}_${now}`;
 
-        this.networkLogs.push({
-          type: 'request',
+        const log: NetworkLog = {
           url: request.url(),
+          urlName: this.normalizeUrlName(request.url()),
           method: request.method(),
           headers: request.headers(),
-          timestamp: Date.now()
-        });
+          requestTimestamp: now,
+        };
+
+        requestMap.set(key, log);
+        (request as any)._key = key;
       });
 
-      this.page.on('response', (response) => {
-        const startTime = requestTimes.get(response.url());
-        const endTime = Date.now();
-        const duration = startTime ? endTime - startTime : 0;
-
+      this.page.on('response', async (response) => {
         const request = response.request();
-        this.networkLogs.push({
-          type: 'response',
-          url: response.url(),
-          method: request.method(),
-          status: response.status(),
-          duration: duration,
-        });
+        const key = (request as any)._key;
 
-        // Limpiar memoria
-        requestTimes.delete(response.url());
+        if (!key || !requestMap.has(key)) return;
+
+        const log = requestMap.get(key)!;
+        try {
+          await response.body();
+        } catch (e) {
+          // falló la descarga
+        }
+
+        const endTime = performance.now();
+
+        log.status = response.status();
+        // log.duration = endTime - log.requestTimestamp;
+        log.duration = endTime - request.timing().startTime;
+        log.curl = this.toCurl(log, await request.postData());
+
+        this.networkLogs.push(log);
+        requestMap.delete(key);
       });
-
     }
 
     // JavaScript errors
@@ -137,6 +140,28 @@ export class MetricsCollector {
       console.error('Page Error:', error);
     });
   }
+
+  private normalizeUrlName(url: string): string {
+    const filename = url.split("/").pop()?.split("?")[0] || url;
+    // Reemplaza ".min" justo antes de la extensión
+    return filename.replace(/\.min(?=\.\w+$)/, "");
+  }
+
+  //create curl
+  private toCurl(log: NetworkLog, body?: string | null): string {
+    let curl = `curl -X ${log.method} '${log.url}'`;
+
+    for (const [key, value] of Object.entries(log.headers)) {
+      curl += ` -H '${key}: ${value}'`;
+    }
+
+    if (body) {
+      curl += ` --data '${body}'`;
+    }
+
+    return curl;
+  }
+
 
   /**
    * Record custom metric
@@ -398,12 +423,11 @@ export class MetricsCollector {
   /**
    * Reset metrics for new measurement
    */
-  reset(): void {
+  resetMetrics(): void {
     this.customMetrics = {};
     this.consoleLogs = [];
     this.networkLogs = [];
     this.jsErrors = [];
-    console.log('📊 Metrics collector reset');
   }
 
   /**

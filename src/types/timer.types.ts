@@ -1,8 +1,13 @@
+import { NetworkLog } from "../metrics/MetricsCollector";
+
 export interface SubStep {
     name: string;
     duration: number;
     startTime: number;
     endTime: number;
+    networkLogs: NetworkLog[];
+    jsErrors: string[]
+    consoleLogs: string[]
 }
 
 export interface Step {

@@ -14,16 +14,16 @@ async function globalTeardown(config: FullConfig, result: FullResult): Promise<v
 
   try {
     // Update performance tracking
-    await updatePerformanceTracking(result);
+    //await updatePerformanceTracking(result);
 
     // Generate final summary
-    await generateFinalSummary(appConfig, result);
+    //await generateFinalSummary(appConfig, result);
 
     // Cleanup temporary files
     await cleanupTempFiles(appConfig);
 
     // Archive results if configured
-    await archiveResults(appConfig);
+    //await archiveResults(appConfig);
 
     // Send notifications if configured
     await sendNotifications(appConfig, result);
@@ -238,7 +238,7 @@ async function cleanupTempFiles(config: ConfigManager): Promise<void> {
 
   for (const dir of tempDirectories) {
     try {
-      await fs.rmdir(dir, { recursive: true });
+      await fs.rm(dir, { recursive: true });
       console.log(`  ✅ Cleaned up: ${dir}`);
     } catch {
       // Directory doesn't exist or can't be removed - ignore

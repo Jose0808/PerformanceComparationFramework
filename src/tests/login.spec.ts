@@ -71,7 +71,7 @@ test.describe('Login Flow', () => {
             // Enable network throttling
             await loginPage.enableNetworkThrottling();
 
-            let timer = new TestTimer();
+            let timer = new TestTimer(page);
 
             await loginPage.login(app, timer);
 

@@ -81,10 +81,10 @@ export default class PerformanceReporter implements Reporter {
   async onEnd(result: FullResult) {
     console.log(`🏁 Test execution completed. Status: ${result.status}`);
 
-    // if (this.testResults.length === 0) {
-    //   console.log('❌ No performance data collected');
-    //   return;
-    // }
+    if (this.testResults.length === 0) {
+      console.log('❌ No performance data collected');
+      return;
+    }
 
     const comparison = ReportGenerator.generateComparison(this.onPremiseResult, this.cloudResult);
 
@@ -395,15 +395,15 @@ export default class PerformanceReporter implements Reporter {
       }
 
 
-      // Process custom metrics
-      result.metrics.networkLogs.forEach(element => {
-        if (element.type === "response") {
-          let partes = element.url.split("/");
-          let key = partes[partes.length - 1];
-          metricSums[key] = (metricSums[key] || 0) + element.duration;
-          metricCounts[key] = (metricCounts[key] || 0) + 1;
-        }
-      });
+      // // Process custom metrics
+      // result.metrics.networkLogs.forEach(element => {
+      //   if (element.type === "response") {
+      //     let partes = element.url.split("/");
+      //     let key = partes[partes.length - 1];
+      //     metricSums[key] = (metricSums[key] || 0) + element.duration;
+      //     metricCounts[key] = (metricCounts[key] || 0) + 1;
+      //   }
+      // });
     }
 
     // Calculate averages

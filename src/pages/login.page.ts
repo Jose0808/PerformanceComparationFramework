@@ -29,8 +29,6 @@ export class LoginPage extends BasePage {
 
     // PASO 1: LOGIN
     timer.startStep(appConfig.name, 'Login');
-
-    const loginStartTime = Date.now();
     console.log(`Starting login flow for ${appConfig.name}`);
 
     try {

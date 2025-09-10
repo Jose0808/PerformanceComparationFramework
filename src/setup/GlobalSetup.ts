@@ -41,7 +41,6 @@ async function createDirectories(config: ConfigManager): Promise<void> {
     // path.join(config.reporting.outputPath, 'videos'),
     // // path.join(config.reporting.outputPath, 'traces'),
     // // path.join(config.reporting.outputPath, 'raw-data'),
-    // 'allure-results',
     // 'test-results'
   ];
 

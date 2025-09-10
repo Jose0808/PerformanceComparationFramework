@@ -1,6 +1,7 @@
+import { MetricsCollector } from "../metrics/MetricsCollector";
 import { Step, SubStep, TestExecution } from "../types/timer.types";
 
-export class TestTimer {
+export class TestTimer extends MetricsCollector {
   private currentStep: Step | null = null;
   private currentSubStep: SubStep | null = null;
   private steps: Step[] = [];
@@ -41,7 +42,10 @@ export class TestTimer {
       name: subStepName,
       duration: 0,
       startTime: performance.now(),
-      endTime: 0
+      endTime: 0,
+      networkLogs: [],
+      jsErrors: [],
+      consoleLogs: [],
     };
   }
 
@@ -52,6 +56,10 @@ export class TestTimer {
 
     this.currentSubStep.endTime = performance.now();
     this.currentSubStep.duration = (this.currentSubStep.endTime - this.currentSubStep.startTime) / 1000;
+    this.currentSubStep.networkLogs = this.getNetworkLogs();
+    this.currentSubStep.consoleLogs = this.getConsoleLogs();
+    this.currentSubStep.jsErrors = this.getJSErrors();
+    this.resetMetrics();
 
     console.log(`📊 Tiempo registrado: ${this.currentSubStep.name} = ${this.currentSubStep.duration}ms`);
 

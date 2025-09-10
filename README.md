@@ -101,10 +101,6 @@ npx playwright test --project=chromium
 
 # Run with UI mode
 npm run test:ui
-
-# Generate and serve Allure report
-npm run allure:generate
-npm run allure:serve
 ```
 
 ## 📊 Reports and Artifacts
@@ -115,7 +111,6 @@ npm run allure:serve
 2. **Comparison Report** (`comparison_report.html`): Side-by-side performance analysis  
 3. **Individual App Reports**: Detailed metrics per application
 4. **Playwright HTML Report**: Test execution details
-5. **Allure Report**: Advanced test reporting with trends
 
 ### Report Locations
 

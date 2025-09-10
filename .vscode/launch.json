@@ -1,17 +1,54 @@
-{
-  "version": "0.2.0",
-  "configurations": [
-    {
-      "name": "Debug Main Process",
-      "type": "node",
-      "request": "launch",
-      "cwd": "${workspaceFolder}",
-      "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron",
-      "windows": {
-        "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron.cmd"
-      },
-      "args" : ["."],
-      "outputCapture": "std"
-    }
-  ]
-}
+// {
+//   "version": "0.2.0",
+//   "configurations": [
+//     {
+//       "name": "Debug Main Process",
+//       "type": "node",
+//       "request": "launch",
+//       "cwd": "${workspaceFolder}",
+//       "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron",
+//       "windows": {
+//         "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron.cmd"
+//       },
+//       "args" : ["."],
+//       "outputCapture": "std"
+//     }
+//   ]
+// }
+// {
+//     "version": "0.2.0",
+//     "configurations": [
+//         {
+//             "name": "Debug SchedulerExecutor JS",
+//             "type": "node",
+//             "request": "launch",
+//             "program": "${workspaceFolder}/dist/scheduler/SchedulerExecutor.js",
+//             "args": [
+//                 "--profile=profile_1757101369243_2hren1nb2"
+//             ],
+//             "cwd": "${workspaceFolder}",
+//             "env": {
+//                 "NODE_ENV": "development"
+//             },
+//             "console": "integratedTerminal",
+//             "skipFiles": [
+//                 "<node_internals>/**"
+//             ],
+//             "sourceMaps": true,
+//             "outFiles": [
+//                 "${workspaceFolder}/dist/**/*.js"
+//             ]
+//         },
+//         {
+//             "name": "Debug with Chrome DevTools",
+//             "type": "node",
+//             "request": "launch",
+//             "program": "${workspaceFolder}/dist/scheduler/SchedulerExecutor.js",
+//             "args": ["--profile=profile_1757101369243_2hren1nb2"],
+//             "cwd": "${workspaceFolder}",
+//             "protocol": "inspector",
+//             "port": 9229,
+//             "sourceMaps": true
+//         }
+//     ]
+// }

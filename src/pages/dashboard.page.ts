@@ -43,7 +43,7 @@ export class DashboardPage extends BasePage {
       await this.clickElement(this.siteMap);
       timer.endSubStep();
 
-      timer.startSubStep('Espera visibilidad de el menú: ' + menu) ;
+      timer.startSubStep('Espera visibilidad de el menú: ' + menu);
       const frameSelector = await this.page.locator(this.currentFrame).contentFrame();
       const element = frameSelector.getByRole(this.integratedOperation.role, { name: menu });
       await this.waitForElementLocator(element, "Pantalla Menú " + menu);
@@ -70,12 +70,12 @@ export class DashboardPage extends BasePage {
     const StartTime = Date.now();
     console.log(`Starting select menu map site`);
 
-    try {      
-      timer.startSubStep('Click menú: ' + menu) ;
+    try {
+      timer.startSubStep('Click menú: ' + menu);
       const frameSelector = await this.page.locator(this.currentFrame).contentFrame();
       await frameSelector.getByRole(this.integratedOperation.role, { name: menu }).click();
       timer.endSubStep();
-      timer.startSubStep('Click en submenú: ' + subMenu) ;
+      timer.startSubStep('Click en submenú: ' + subMenu);
       await frameSelector.getByRole(this.individual360View.role, { name: subMenu }).click();
       timer.endSubStep();
 
@@ -93,17 +93,29 @@ export class DashboardPage extends BasePage {
   async waitForSuccessfulLogin(): Promise<void> {
     console.log('Waiting for successful login indicators');
 
+    const errorDiv = this.page.locator('#div_error');
+
     try {
-      const exists = await this.waitForElement(this.successIndicators, "Pantalla dashboard");
-      if (!exists) {
-        throw new Error(`Login may have failed - still seeing login elements: ${this.successIndicators}`);
-      }
+      await Promise.race([
+        this.waitForElement(this.successIndicators, 'Pantalla dashboard'),
+
+        (async () => {
+          if (await errorDiv.isVisible()) {
+            const txt = await errorDiv.innerText();
+            if (txt.trim().length > 0) {
+              throw new Error(`❌ Login fallido - Error: "${txt}"`);
+            }
+          }
+        })()
+      ]);
+
       console.log(`Login success detected with indicator: ${this.successIndicators}`);
-    } catch {
-      throw new Error('Login success not found');
+      await this.waitFoLoad();
+      console.log('Login success verification completed');
+    } catch (err) {
+      throw new Error(`Login no exitoso: ${(err as Error).message}`);
     }
-    await this.waitFoLoad();
-    console.log(`Login success verification completed`);
   }
+
 
 }

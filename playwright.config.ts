@@ -1,9 +1,14 @@
 import { defineConfig, devices } from '@playwright/test';
 import { config } from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 
 // Load environment variables
 config();
+
+const resourcesPathFromProcess = (process as any).resourcesPath || '';
+const packagedResourcesBase = process.env.PACKAGED_RESOURCES || (resourcesPathFromProcess ? path.join(resourcesPathFromProcess, 'resources') : '');
+const resolvePlaywrightResource = (sub: string) => packagedResourcesBase ? path.join(packagedResourcesBase, sub) : path.join(__dirname, sub);
 
 const {
   // Browser & Device Configuration
@@ -57,6 +62,15 @@ const {
   NETWORK_PACKET_LOSS = '0'
 } = process.env;
 
+/* 🔑 Detectar si estamos en producción (Electron instalado) */
+const resourcesBrowsersPath = path.join(process.resourcesPath || '', 'browsers');
+if (fs.existsSync(resourcesBrowsersPath)) {
+  process.env.PLAYWRIGHT_BROWSERS_PATH = resourcesBrowsersPath;
+  console.log(`👉 Usando navegadores empaquetados en: ${resourcesBrowsersPath}`);
+} else {
+  console.log(`👉 Usando navegadores Playwright por defecto (node_modules)`);
+}
+
 // Parse boolean values
 const isHeadless = HEADLESS_MODE === 'true';
 const isParallel = RUN_PARALLEL === 'true';
@@ -86,18 +100,18 @@ const packetLoss = parseInt(NETWORK_PACKET_LOSS);
 // Configure reporters based on FORMAT
 const reporters: any = [];
 if (REPORT_FORMAT.includes('html')) {
-  reporters.push(['html', { 
+  reporters.push(['html', {
     outputFolder: path.join(OUTPUT_PATH, 'playwright-report'),
     open: 'never'
   }]);
 }
 if (REPORT_FORMAT.includes('json')) {
-  reporters.push(['json', { 
+  reporters.push(['json', {
     outputFile: path.join(OUTPUT_PATH, 'test-results.json')
   }]);
 }
 if (REPORT_FORMAT.includes('junit')) {
-  reporters.push(['junit', { 
+  reporters.push(['junit', {
     outputFile: path.join(OUTPUT_PATH, 'junit-results.xml')
   }]);
 }
@@ -106,8 +120,8 @@ if (REPORT_FORMAT.includes('junit')) {
 reporters.push(['./src/reporters/PerformanceReporter.ts']);
 
 export default defineConfig({
-  testDir: './src/tests',
-  outputDir: path.join(OUTPUT_PATH, 'test-results'),
+  testDir: resolvePlaywrightResource('src/tests'),
+  outputDir: path.join(resolvePlaywrightResource('reports'), 'test-results'),
 
   /* Reporter configuration */
   reporter: reporters,
@@ -117,7 +131,7 @@ export default defineConfig({
   expect: {
     timeout: loadTimeout
   },
-  
+
   fullyParallel: isParallel,
   forbidOnly: !!process.env.CI,
   retries: retries,
@@ -132,12 +146,12 @@ export default defineConfig({
   use: {
     actionTimeout: loadTimeout,
     navigationTimeout: loadTimeout,
-    
+
     /* Capture options */
     screenshot: generateScreenshots ? (failureScreenshot ? 'only-on-failure' : 'on') : 'off',
     video: generateVideo ? 'on' : 'off',
     trace: generateTrace ? 'on' : 'off',
-    
+
     /* Viewport */
     viewport: {
       width: viewportWidth,
@@ -171,7 +185,7 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { 
+      use: {
         ...devices[DEVICE_TYPE === 'desktop' ? 'Desktop Chrome' : 'Desktop Chrome HiDPI'],
         headless: isHeadless,
         channel: BROWSER_TYPE === 'chrome' ? 'chrome' : undefined
@@ -179,21 +193,21 @@ export default defineConfig({
     },
     {
       name: 'firefox',
-      use: { 
+      use: {
         ...devices['Desktop Firefox'],
         headless: isHeadless
       },
     },
     {
       name: 'webkit',
-      use: { 
+      use: {
         ...devices['Desktop Safari'],
         headless: isHeadless
       },
     }
-  ].filter(project => 
-    BROWSER_TYPE === 'all' || 
-    project.name === BROWSER_TYPE || 
+  ].filter(project =>
+    BROWSER_TYPE === 'all' ||
+    project.name === BROWSER_TYPE ||
     (BROWSER_TYPE === 'chrome' && project.name === 'chromium')
   ),
 
