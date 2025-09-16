@@ -1,12 +1,12 @@
 import { Page } from '@playwright/test';
 import { BasePage } from './base.page';
 import { FrameOptionsByRole } from '../types/frameOptions';
-import { AppConfig } from '../config/ConfigManager';
+import { AppConfig } from '../types/config.types';
 import { TestTimer } from '../utils/timer.utils';
 
 
 export class Checkout extends BasePage {
-    [x: string]: any;
+
     // Generic selectors that should work for most login forms
 
     private readonly currentFrame = "div:nth-child(5) > iframe";
@@ -25,13 +25,13 @@ export class Checkout extends BasePage {
             timer.startSubStep('Espera cargue pantalla: Checkout detalle de pago');
 
             const frameSelector = await this.page.locator(this.currentFrame).contentFrame();
-            
+
             await frameSelector.locator("#checkoutPaymentContentDetail").waitFor({
                 state: 'visible',
                 timeout: this.config.test.timeout
             });
             timer.endSubStep();
-            
+
             timer.endStep();
 
             console.log(`✅ Checkout Validate completed successfully`);

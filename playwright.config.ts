@@ -171,6 +171,9 @@ export default defineConfig({
       }
     }),
 
+    // No usar storage state global por defecto
+    storageState: undefined,
+
     /* Ignore HTTPS errors */
     ignoreHTTPSErrors: true,
 

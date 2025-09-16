@@ -125,7 +125,7 @@ export class MetricsCollector {
 
         log.status = response.status();
         // log.duration = endTime - log.requestTimestamp;
-        log.duration = endTime - request.timing().startTime;
+        log.duration = request.timing().responseEnd - request.timing().requestStart;
         log.curl = this.toCurl(log, await request.postData());
 
         this.networkLogs.push(log);

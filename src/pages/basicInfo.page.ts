@@ -1,12 +1,12 @@
 import { Page, Locator, FrameLocator } from '@playwright/test';
 import { BasePage } from './base.page';
-import { AppConfig } from '../config/ConfigManager';
+import { AppConfig } from '../types/config.types';
 import { ICambioDeNumero } from '../types/cambioDeNumero';
 import { TestTimer } from '../utils/timer.utils';
 
 
 export class BasicInfo extends BasePage {
-    [x: string]: any;
+
     // Generic selectors that should work for most login forms
     private readonly currentFrame = "div:nth-child(4) > iframe";
     private readonly suscriptions = "Suscripciones";
@@ -101,7 +101,7 @@ export class BasicInfo extends BasePage {
             timer.startSubStep('Click menú: ' + menuSuscription);
             await changeNumber.click();
             timer.endSubStep();
-            
+
             console.log(`✅ Table select completed successfully`);
         } catch (error) {
             console.error(`❌ Table select failed`, error);
@@ -118,7 +118,7 @@ export class BasicInfo extends BasePage {
         const nextPage = await frame.locator('.next');
         const maxPages = await frame.locator('.uPage').count();
 
-        console.log("max pages:" + maxPages)
+        console.log("max pages: " + maxPages)
         while (currentPage <= maxPages) {
             console.log(`Buscando en página ${currentPage}...`);
             // Buscar en la página actual
@@ -153,6 +153,8 @@ export class BasicInfo extends BasePage {
 
             if (await row.count() > 0) {
                 console.log('Registro encontrado en la página actual');
+                await this.handleServerError(frame);
+
                 await this.processRow(timer, row);
                 return true;
             }
@@ -165,9 +167,22 @@ export class BasicInfo extends BasePage {
         }
     }
 
+    async handleServerError(frame: FrameLocator) {
+        const errorDiv = frame.locator('#win0');
+        if (await errorDiv.isVisible({ timeout: 5000 })) {
+            console.log('❌ Error detectado en la aplicación');
+            const closeBtn = errorDiv.getByRole('button', { name: 'Cerrar' });
+            const details = await errorDiv.innerText();
+            console.log('📄 Detalles del error:\n', details);
+            if (await closeBtn.isVisible()) {
+                await closeBtn.click();
+                console.log('✅ Modal de error cerrado');
+            }
+        }
+    }
+
     private async processRow(timer: TestTimer, row: Locator): Promise<void> {
         try {
-
             timer.startSubStep('Click checkbox de la fila');
             await row.click();
             timer.endSubStep();

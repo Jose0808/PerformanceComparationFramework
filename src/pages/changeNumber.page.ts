@@ -1,13 +1,12 @@
 import { Page, Locator, FrameLocator, expect } from '@playwright/test';
 import { BasePage } from './base.page';
-import { AppConfig } from '../config/ConfigManager';
+import { AppConfig } from '../types/config.types';
 import { ICambioDeNumero } from '../types/cambioDeNumero';
 import { FrameOptionsByRole } from '../types/frameOptions';
 import { TestTimer } from '../utils/timer.utils';
 
 
 export class ChangeNumber extends BasePage {
-    [x: string]: any;
     // Generic selectors that should work for most login forms
 
     private readonly currentFrame = "div:nth-child(5) > iframe";

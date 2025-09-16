@@ -2,18 +2,20 @@
   "name": "performance-comparison-framework",
   "version": "1.0.0",
   "description": "Framework de comparación de rendimiento con Playwright",
-  "main": "dist/main.js",
+  "main": "dist/electron/main.js",
   "scripts": {
     "test": "playwright test",
     "test:headed": "playwright test --headed",
     "test:debug": "playwright test --debug",
     "test:ui": "playwright test --ui",
-    "report": "playwright show-report",
+    "report": "playwright show-report reports/playwright-report",
     "install:browsers": "playwright install --with-deps",
     "electron": "electron .",
     "electron:dev": "electron . --dev",
     "build:ts": "tsc -p tsconfig.json",
-    "pack": "npm run install:browsers && npm run prepare-build && electron-builder --dir",
+    "build:assets": "node src/scripts/copy-assets.js",
+    "prepare-build": "npm run build:ts && npm run build:assets",
+    "pack": "npm run prepare-build && electron-builder --dir",
     "build:electron": "npm run install:browsers && npm run prepare-build && electron-builder --win",
     "postinstall": "electron-builder install-app-deps",
     "scheduler:start": "node dist/scheduler/SchedulerExecutor.js"
@@ -48,36 +50,36 @@
       "buildResources": "build"
     },
     "files": [
-      "electron/**/*",
       "dist/**/*",
-      "package.json"
+      "src/**/*",
+      "renderer/**/*",
+      "playwright.config.ts",
+      "package.json",
+      "!node_modules/.cache",
+      "!src/tests/test-results",
+      "!**/*.map"
     ],
-    "extraFiles": [
+    "extraResources": [
       {
-        "from": "src/tests",
-        "to": "resources/src/tests"
+        "from": "node_modules",
+        "to": "node_modules"
       },
       {
-        "from": "src/data-driven",
-        "to": "resources/src/data-driven"
+        "from": "electron/renderer",
+        "to": "renderer"
+      },
+      {
+        "from": "src",
+        "to": "src"
       },
       {
         "from": ".env",
-        "to": "resources/.env"
+        "to": ".env"
       },
       {
         "from": "playwright.config.ts",
-        "to": "resources/playwright.config.ts"
-      },
-      {
-        "from": "browsers",
-        "to": "browsers"
+        "to": "playwright.config.ts"
       }
-    ],
-    "asarUnpack": [
-      "node_modules/@playwright/**/*",
-      "node_modules/playwright/**/*",
-      "node_modules/playwright-core/**/*"
     ],
     "nsis": {
       "oneClick": false,

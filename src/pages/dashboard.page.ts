@@ -1,11 +1,11 @@
-import { Page, Locator } from '@playwright/test';
+import { Page, Locator, expect } from '@playwright/test';
 import { BasePage } from './base.page';
-import { AppConfig } from '../config/ConfigManager';
+import { AppConfig } from '../types/config.types';
 import { FrameOptionsByRole } from '../types/frameOptions';
 import { TestTimer } from '../utils/timer.utils';
 
 export class DashboardPage extends BasePage {
-  [x: string]: any;
+
   // Generic selectors that should work for most login forms
   private readonly successIndicators = '#sitemap';
   private readonly siteMap = '#sitemap';
@@ -23,13 +23,12 @@ export class DashboardPage extends BasePage {
    * Select option left menu Map Site
    */
   async selectOnDashboard(appConfig: AppConfig, timer: TestTimer, menu: string, subMenu: string): Promise<void> {
-
     timer.startStep(appConfig.name, 'Seleccionar menús Dashboard');
+    await this.waitDashboardScreen(timer);
     await this.selectLeftMenu(timer, menu);
     await this.selectMenuMapSite(timer, menu, subMenu);
     timer.endStep();
   }
-
 
   /**
    * Select option left menu dashboard
@@ -82,7 +81,6 @@ export class DashboardPage extends BasePage {
       console.log(`✅ Select menu map site completed successfully`);
     } catch (error) {
       console.error(`❌ Select Menu map site failed`, error);
-
       throw error;
     }
   }
@@ -90,32 +88,20 @@ export class DashboardPage extends BasePage {
   /**
    * Wait for successful login indicators
    */
-  async waitForSuccessfulLogin(): Promise<void> {
-    console.log('Waiting for successful login indicators');
-
-    const errorDiv = this.page.locator('#div_error');
-
+  async waitDashboardScreen(timer: TestTimer): Promise<void> {
+    timer.startSubStep('Espera de pantalla dashboard');
+    console.log('⏳ Esperando pantalla dashboard');
     try {
-      await Promise.race([
-        this.waitForElement(this.successIndicators, 'Pantalla dashboard'),
-
-        (async () => {
-          if (await errorDiv.isVisible()) {
-            const txt = await errorDiv.innerText();
-            if (txt.trim().length > 0) {
-              throw new Error(`❌ Login fallido - Error: "${txt}"`);
-            }
-          }
-        })()
-      ]);
-
-      console.log(`Login success detected with indicator: ${this.successIndicators}`);
+      await this.waitForElement(this.successIndicators, 'Pantalla dashboard');
       await this.waitFoLoad();
-      console.log('Login success verification completed');
-    } catch (err) {
-      throw new Error(`Login no exitoso: ${(err as Error).message}`);
+      timer.endSubStep();
+      console.log(`✅ Pantalla dashboard cargada exitosamente`);
+    } catch (error) {
+      throw new Error(`❌ No se encontro pantalla dashboard - Error: ${error}`);
     }
   }
+
+
 
 
 }

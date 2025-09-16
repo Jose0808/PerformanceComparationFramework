@@ -1,6 +1,7 @@
 import { Page, Locator, expect, FrameLocator } from '@playwright/test';
 import { ConfigManager } from '../config/ConfigManager';
 import { MetricsCollector } from '../metrics/MetricsCollector';
+import { TestTimer } from '../utils/timer.utils';
 
 /**
  * Abstract base class for all page objects in the test framework.
@@ -27,25 +28,25 @@ export abstract class BasePage {
    * @param url - Target URL to navigate to
    * @param options - Additional navigation options
    */
-  async goto(url: string, options?: {
-    waitUntil?: 'load' | 'domcontentloaded' | 'networkidle' | 'commit';
-    timeout?: number;
-    referer?: string;
-  }): Promise<void> {
+  async goto(url: string, timer: TestTimer,
+    options?: {
+      waitUntil?: 'load' | 'domcontentloaded' | 'networkidle' | 'commit';
+      timeout?: number;
+      referer?: string;
+    }): Promise<void> {
+    timer.startSubStep('Navegar a la URL');
     try {
-      console.log(`Navigating to: ${url}`);
-
+      console.log(`⏳ Navegando a la URL: ${url}`);
       await this.page.goto(url, {
         waitUntil: options?.waitUntil || 'networkidle',
         timeout: options?.timeout || (this.config.test.timeout * 1000),
         referer: options?.referer
       });
-
       await this.waitForPageLoad();
-      console.log(`Navigation completed`);
+      console.log(`✅ Navegación finalizada`);
+      timer.endSubStep();
     } catch (error) {
-      console.error(`Navigation failed for URL: ${url}`, error);
-      throw new Error(`Failed to navigate to ${url}: ${error}`);
+      throw new Error(`❌ Error en la navegación URL: ${url}: ${error}`);
     }
   }
 
@@ -85,20 +86,22 @@ export abstract class BasePage {
    */
   async waitForElement(selector: string, description: string, frame?: FrameLocator): Promise<Locator> {
     try {
+      console.log(`⏳ Esperando elemento: ${selector}`);
       let element = frame ? frame.locator(selector) : this.page.locator(selector);
 
       await element.waitFor({
         state: 'visible',
         timeout: this.config.test.timeout
       });
+      console.log(`✅ Elemento encontrado`);
 
       return element;
 
     } catch (error) {
-      throw new Error(`Element not found or not visible: ${selector}. ${error}`);
+      throw new Error(`❌ Error al esperar el elemento: ${selector}. ${error}`);
     }
   }
-  
+
   /**
    * Wait for element to be visible with enhanced error handling
    * @param selector - Element selector
@@ -106,13 +109,15 @@ export abstract class BasePage {
    * @returns Promise<Locator>
    */
   async waitForElementLocator(selector: Locator, description: string): Promise<void> {
+    console.log(`⏳ Esperando elemento`);
     try {
       await selector.waitFor({
         state: 'visible',
         timeout: this.config.test.timeout
       });
+      console.log(`✅ Elemento encontrado`);
     } catch (error) {
-      throw new Error(`Element not found or not visible: ${selector}. ${error}`);
+      throw new Error(`❌ Error al esperar el elemento: ${selector}. ${error}`);
     }
   }
 
@@ -123,12 +128,18 @@ export abstract class BasePage {
    * @returns Promise<Locator>
    */
   async waitForElementAttached(selector: string, timeout?: number): Promise<Locator> {
-    const element = this.page.locator(selector);
-    await element.waitFor({
-      state: 'attached',
-      timeout: timeout || this.config.test.timeout
-    });
-    return element;
+    console.log(`⏳ Esperando elemento: ${selector}`);
+    try {
+      const element = this.page.locator(selector);
+      await element.waitFor({
+        state: 'attached',
+        timeout: timeout || this.config.test.timeout
+      });
+      console.log(`✅ Finalizado: Esperar elemento`);
+      return element;
+    } catch (error) {
+      throw new Error(`❌ Error al esperar el elemento: ${selector}. ${error}`);
+    }
   }
 
   /**
@@ -148,6 +159,7 @@ export abstract class BasePage {
     frame?: FrameLocator
   ): Promise<void> {
     try {
+      console.log(`⏳ Haciendo clic en el campo: ${selector}`);
       let element = frame ? frame.locator(selector) : this.page.locator(selector);
       await element.click({
         force: options?.force,
@@ -155,8 +167,9 @@ export abstract class BasePage {
         position: options?.position,
         modifiers: options?.modifiers
       });
+      console.log(`✅ Finalizado: Hacer clic`);
     } catch (error) {
-      throw new Error(`Failed to click element: ${selector}. ${error}`);
+      throw new Error(`❌ Error al hacer clic en el campo: ${selector}. ${error}`);
     }
   }
 
@@ -170,7 +183,7 @@ export abstract class BasePage {
       let element = frame ? frame.locator(selector) : this.page.locator(selector);
       await element.dblclick();
     } catch (error) {
-      throw new Error(`Failed to double-click element: ${selector}. ${error}`);
+      throw new Error(`❌ Failed to double-click element: ${selector}. ${error}`);
     }
   }
 
@@ -184,7 +197,7 @@ export abstract class BasePage {
       let element = frame ? frame.locator(selector) : this.page.locator(selector);
       await element.click({ button: 'right' });
     } catch (error) {
-      throw new Error(`Failed to right-click element: ${selector}. ${error}`);
+      throw new Error(`❌ Failed to right-click element: ${selector}. ${error}`);
     }
   }
 
@@ -201,6 +214,8 @@ export abstract class BasePage {
     frame?: FrameLocator,
   ): Promise<void> {
     try {
+      console.log(`⏳ Escribiendo: ${value} en el campo: ${selector}`);
+
       let element = frame ? frame.locator(selector) : this.page.locator(selector);
       // Clear existing content
       await element.clear();
@@ -211,10 +226,12 @@ export abstract class BasePage {
       // Verify the value was set correctly
       const actualValue = await element.inputValue();
       if (actualValue !== value) {
-        console.warn(`Expected value "${value}" but got "${actualValue}" for selector: ${selector}`);
+        console.warn(`⚠️ Se esperaba el valor: "${value}" pero se obtuvo: "${actualValue}" para el selector: ${selector}`);
       }
+      console.log(`✅ Valor escrito en el campo`);
+
     } catch (error) {
-      throw new Error(`Failed to fill input: ${selector} with value: ${value}. ${error}`);
+      throw new Error(`❌ Error al ingresar valor en el campo: ${selector} y el valor: ${value}. ${error}`);
     }
   }
 
@@ -229,7 +246,7 @@ export abstract class BasePage {
       const element = await this.waitForElement(selector, description, frame);
       await element.type(text, { delay });
     } catch (error) {
-      throw new Error(`Failed to type text in element: ${selector}. ${error}`);
+      throw new Error(`❌ Failed to type text in element: ${selector}. ${error}`);
     }
   }
 
@@ -241,11 +258,12 @@ export abstract class BasePage {
    */
   async fillDropdown(selector: string, value: string, frame?: FrameLocator): Promise<void> {
     try {
+      console.log(`⏳ Eligiendo opción menú desplegable`);
       let element = frame ? frame.locator(selector) : this.page.locator(selector);
       await element.selectOption({ value });
-
+      console.log(`✅ Finalizado: Elegir opción menú desplegable`);
     } catch (error) {
-      throw new Error(`Failed to select option "${value}" in dropdown: ${selector}. ${error}`);
+      throw new Error(`❌ Error al seleccionar la opción: "${value}" en el menú desplegable: ${selector}. ${error}`);
     }
   }
 
@@ -265,7 +283,7 @@ export abstract class BasePage {
       });
       await element.selectOption({ label: value });
     } catch (error) {
-      throw new Error(`Failed to select option "${value}" in dropdown: ${selector}. ${error}`);
+      throw new Error(`❌ Failed to select option "${value}" in dropdown: ${selector}. ${error}`);
     }
   }
 
@@ -279,7 +297,7 @@ export abstract class BasePage {
       let element = frame ? frame.locator(selector) : this.page.locator(selector);
       await element.setChecked(checked);
     } catch (error) {
-      throw new Error(`Failed to ${checked ? 'check' : 'uncheck'} element: ${selector}. ${error}`);
+      throw new Error(`❌ Failed to ${checked ? 'check' : 'uncheck'} element: ${selector}. ${error}`);
     }
   }
 
@@ -293,7 +311,7 @@ export abstract class BasePage {
       const element = await this.waitForElement(selector, description, frame);
       await element.setInputFiles(filePaths);
     } catch (error) {
-      throw new Error(`Failed to upload files to element: ${selector}. ${error}`);
+      throw new Error(`❌ Failed to upload files to element: ${selector}. ${error}`);
     }
   }
 
@@ -322,7 +340,7 @@ export abstract class BasePage {
         timeout: timeout || this.config.test.timeout
       });
     } catch (error) {
-      throw new Error(`Text "${text}" not found within timeout. ${error}`);
+      throw new Error(`❌ Text "${text}" not found within timeout. ${error}`);
     }
   }
 
@@ -430,7 +448,7 @@ export abstract class BasePage {
       let element = frame ? frame.locator(selector) : this.page.locator(selector);
       return await element.textContent() || '';
     } catch (error) {
-      throw new Error(`Failed to get text from element: ${selector}. ${error}`);
+      throw new Error(`❌ Failed to get text from element: ${selector}. ${error}`);
     }
   }
 
@@ -444,7 +462,7 @@ export abstract class BasePage {
       let element = frame ? frame.locator(selector) : this.page.locator(selector);
       return await element.innerText();
     } catch (error) {
-      throw new Error(`Failed to get inner text from element: ${selector}. ${error}`);
+      throw new Error(`❌ Failed to get inner text from element: ${selector}. ${error}`);
     }
   }
 
@@ -458,7 +476,7 @@ export abstract class BasePage {
       let element = frame ? frame.locator(selector) : this.page.locator(selector);
       return await element.inputValue();
     } catch (error) {
-      throw new Error(`Failed to get input value from element: ${selector}. ${error}`);
+      throw new Error(`❌ Failed to get input value from element: ${selector}. ${error}`);
     }
   }
 
@@ -473,7 +491,7 @@ export abstract class BasePage {
       const element = await this.waitForElement(selector, description, frame);
       return await element.getAttribute(attribute);
     } catch (error) {
-      throw new Error(`Failed to get attribute "${attribute}" from element: ${selector}. ${error}`);
+      throw new Error(`❌ Failed to get attribute "${attribute}" from element: ${selector}. ${error}`);
     }
   }
 
@@ -599,7 +617,7 @@ export abstract class BasePage {
       const element = await this.waitForElement(selector, description, frame);
       await element.scrollIntoViewIfNeeded();
     } catch (error) {
-      throw new Error(`Failed to scroll to element: ${selector}. ${error}`);
+      throw new Error(`❌ Failed to scroll to element: ${selector}. ${error}`);
     }
   }
 

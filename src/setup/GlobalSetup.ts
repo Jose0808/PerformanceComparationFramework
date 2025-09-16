@@ -8,21 +8,21 @@ import * as path from 'path';
  */
 async function globalSetup(config: FullConfig): Promise<void> {
   console.log('\n🚀 Starting Global Setup...');
-  
+
   const appConfig = ConfigManager.getInstance();
-  
+
   try {
     // Create necessary directories
     await createDirectories(appConfig);
-    
+
     // Validate configuration
     await validateConfiguration(appConfig);
-    
+
     // Display test configuration
     displayTestConfiguration(appConfig, config);
-    
+
     console.log('✅ Global Setup completed successfully\n');
-    
+
   } catch (error) {
     console.error('❌ Global Setup failed:', error);
     throw error;
@@ -34,7 +34,7 @@ async function globalSetup(config: FullConfig): Promise<void> {
  */
 async function createDirectories(config: ConfigManager): Promise<void> {
   console.log('📁 Creating directories...');
-  
+
   const directories = [
     config.reporting.outputPath,
     // path.join(config.reporting.outputPath, 'screenshots'),
@@ -60,14 +60,14 @@ async function createDirectories(config: ConfigManager): Promise<void> {
  */
 async function validateConfiguration(config: ConfigManager): Promise<void> {
   console.log('🔧 Validating configuration...');
-  
+
   const validations = [
     {
       name: 'App1 Configuration',
       check: () => config.app1.name && config.app1.baseUrl && config.app1.username && config.app1.password
     },
     {
-      name: 'App2 Configuration', 
+      name: 'App2 Configuration',
       check: () => config.app2.name && config.app2.baseUrl && config.app2.username && config.app2.password
     },
     {
@@ -107,7 +107,7 @@ async function validateConfiguration(config: ConfigManager): Promise<void> {
  */
 async function validateUrlsAccessibility(config: ConfigManager): Promise<void> {
   console.log('🌐 Validating URL accessibility...');
-  
+
   const urls = [
     { name: config.app1.name, url: config.app1.baseUrl },
     { name: config.app2.name, url: config.app2.baseUrl }
@@ -115,11 +115,11 @@ async function validateUrlsAccessibility(config: ConfigManager): Promise<void> {
 
   for (const { name, url } of urls) {
     try {
-      const response = await fetch(url, { 
+      const response = await fetch(url, {
         method: 'HEAD',
-        signal: AbortSignal.timeout(10000) // 10 second timeout
+        signal: AbortSignal.timeout(10000)
       });
-      
+
       if (response.ok) {
         console.log(`  ✅ ${name} (${url}): Accessible`);
       } else {
@@ -137,18 +137,20 @@ async function validateUrlsAccessibility(config: ConfigManager): Promise<void> {
  */
 function displayTestConfiguration(appConfig: ConfigManager, playwrightConfig: FullConfig): void {
   console.log('\n📋 Test Configuration Summary:');
-  console.log('=' .repeat(60));
-  
+  console.log('='.repeat(60));
+
   // Application Configuration
   console.log('\n🎯 Applications:');
   console.log(`  App 1: ${appConfig.app1.name} (${appConfig.app1.technology})`);
   console.log(`    URL: ${appConfig.app1.baseUrl}`);
   console.log(`    Account: ${appConfig.app1.accountType}`);
-  
+  console.log(`    User: ${appConfig.app1.username}`);
+
   console.log(`  App 2: ${appConfig.app2.name} (${appConfig.app2.technology})`);
   console.log(`    URL: ${appConfig.app2.baseUrl}`);
   console.log(`    Account: ${appConfig.app2.accountType}`);
-  
+  console.log(`    User: ${appConfig.app2.username}`);
+
   // Test Configuration
   console.log('\n⚙️  Test Settings:');
   console.log(`  Environment: ${appConfig.test.environment}`);
@@ -157,14 +159,14 @@ function displayTestConfiguration(appConfig: ConfigManager, playwrightConfig: Fu
   console.log(`  Parallel instances: ${appConfig.test.parallelInstances}`);
   console.log(`  Cooldown between runs: ${appConfig.test.cooldownBetweenRuns}ms`);
   console.log(`  Browser restart frequency: every ${appConfig.test.browserRestartFrequency} runs`);
-  
+
   // Network Configuration
   console.log('\n🌐 Network Settings:');
   console.log(`  Conditions: ${appConfig.test.networkConditions}`);
   console.log(`  Download: ${(appConfig.network.downloadThroughput / 1000000).toFixed(1)} Mbps`);
   console.log(`  Upload: ${(appConfig.network.uploadThroughput / 1000000).toFixed(1)} Mbps`);
   console.log(`  Latency: ${appConfig.network.latency}ms`);
-  
+
   // Monitoring Configuration
   console.log('\n📊 Monitoring:');
   console.log(`  Web Vitals: ${appConfig.monitoring.captureWebVitals ? '✅' : '❌'}`);
@@ -172,30 +174,30 @@ function displayTestConfiguration(appConfig: ConfigManager, playwrightConfig: Fu
   console.log(`  Custom Metrics: ${appConfig.monitoring.captureCustomMetrics ? '✅' : '❌'}`);
   console.log(`  Memory Usage: ${appConfig.monitoring.monitorMemoryUsage ? '✅' : '❌'}`);
   console.log(`  Console Logs: ${appConfig.monitoring.captureConsoleLogs ? '✅' : '❌'}`);
-  
+
   // Reporting Configuration
   console.log('\n📄 Reporting:');
   console.log(`  Output Path: ${appConfig.reporting.outputPath}`);
   console.log(`  Formats: ${appConfig.reporting.reportFormat.join(', ')}`);
   console.log(`  Screenshots: ${appConfig.reporting.generateScreenshots ? '✅' : '❌'}`);
   console.log(`  Videos: ${appConfig.reporting.generateVideoRecording ? '✅' : '❌'}`);
-  
+
   // Playwright Configuration
   console.log('\n🎭 Playwright Settings:');
   console.log(`  Workers: ${playwrightConfig.workers}`);
   console.log(`  Retries: ${playwrightConfig.projects[0].retries}`);
   console.log(`  Timeout: ${playwrightConfig.projects[0].timeout}ms`);
   console.log(`  Fully Parallel: ${playwrightConfig.fullyParallel ? '✅' : '❌'}`);
-  
-  // Performance Thresholds
-  console.log('\n🎯 Performance Thresholds:');
-  console.log(`  LCP: ${appConfig.thresholds.lcp}ms`);
-  console.log(`  FID: ${appConfig.thresholds.fid}ms`);
-  console.log(`  CLS: ${appConfig.thresholds.cls}`);
-  console.log(`  TTFB: ${appConfig.thresholds.ttfb}ms`);
-  console.log(`  Login Time: ${appConfig.thresholds.loginTime}ms`);
-  
-  console.log('\n' + '='.repeat(60));
+
+  // // Performance Thresholds
+  // console.log('\n🎯 Performance Thresholds:');
+  // console.log(`  LCP: ${appConfig.thresholds.lcp}ms`);
+  // console.log(`  FID: ${appConfig.thresholds.fid}ms`);
+  // console.log(`  CLS: ${appConfig.thresholds.cls}`);
+  // console.log(`  TTFB: ${appConfig.thresholds.ttfb}ms`);
+  // console.log(`  Login Time: ${appConfig.thresholds.loginTime}ms`);
+
+  console.log('\n' + '='.repeat(60) + '\n');
 }
 
 export default globalSetup;

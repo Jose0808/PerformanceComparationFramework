@@ -1,13 +1,11 @@
 import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import { spawn } from 'child_process';
-import { TaskSchedulerManager } from '../src/scheduler/TaskSchedulerManager';
 import * as path from 'path';
 import * as fs from 'fs';
+import { config } from 'process';
 
 app.disableHardwareAcceleration();
 
-// Instancia del scheduler
-let schedulerManager: TaskSchedulerManager | null = null;
 
 // Configurar switches para estabilidad
 const stabilitySwitches = [
@@ -57,18 +55,20 @@ interface CommandOptions {
 
 // Función para obtener la ruta base correcta según el entorno
 function getBasePath(): string {
+  console.log(app.isPackaged);
   if (app.isPackaged) {
-    // En producción: usar el directorio donde está el ejecutable
+    console.log(path.join(path.dirname(process.execPath), 'resources'));
     return path.join(path.dirname(process.execPath), 'resources');
   } else {
-    // En desarrollo: usar el directorio actual del proyecto
-    return process.cwd();
+    console.log(path.join(__dirname, '..'));
+    return path.join(__dirname, '..');
   }
 }
 
 // Función para obtener rutas de archivos críticos
 function getProjectPaths(): ProjectPaths {
   const basePath = getBasePath();
+  console.log("BasePath: ", basePath);
 
   return {
     basePath,
@@ -82,7 +82,17 @@ function getProjectPaths(): ProjectPaths {
   };
 }
 
-// Función ejecutar comandos con manejo de rutas corregido
+function runNodeScript(scriptPath: string, args: string[] = []) {
+  const nodeRuntime = process.execPath; // Node empaquetado en Electron
+  return spawn(nodeRuntime, [scriptPath, ...args], {
+    cwd: process.resourcesPath, // ruta dentro del .exe donde pusiste tus archivos
+    stdio: "inherit",
+    shell: false
+  });
+}
+
+
+// Función ejecutar comandos
 function executeCommand(command: string, args: string[], options: CommandOptions = {}): Promise<CommandResult> {
   return new Promise((resolve) => {
     const isWindows = process.platform === 'win32';
@@ -95,7 +105,6 @@ function executeCommand(command: string, args: string[], options: CommandOptions
     if (isWindows) {
       if (command === 'npx') {
         finalCommand = path.join(paths.nodeModules, '.bin', 'playwright.cmd');
-        // Remover 'playwright' del principio de args si está presente
         if (finalArgs[0] === 'playwright') {
           finalArgs = finalArgs.slice(1);
         }
@@ -182,6 +191,19 @@ function executeCommand(command: string, args: string[], options: CommandOptions
   });
 }
 
+async function runPlaywright(args: string[], options: CommandOptions = {}): Promise<CommandResult> {
+  const paths = getProjectPaths();
+  console.log(paths);
+  const playwrightBin = path.join(
+    paths.nodeModules,
+    '.bin',
+    process.platform === 'win32' ? 'playwright.cmd' : 'playwright'
+  );
+  console.log(playwrightBin);
+
+  return executeCommand(playwrightBin, args, { cwd: paths.basePath, ...options });
+}
+
 function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1400,
@@ -192,7 +214,7 @@ function createWindow(): void {
       webSecurity: false,
       allowRunningInsecureContent: true
     },
-    icon: path.join(__dirname, 'assets', 'icon.png'),
+    icon: path.join(process.resourcesPath, 'assets', 'icon.png'),
     title: 'Latency Test Runner',
     show: false,
     resizable: true,
@@ -200,7 +222,11 @@ function createWindow(): void {
     maximizable: true
   });
 
-  mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
+  const indexPath = app.isPackaged
+    ? path.join(process.resourcesPath, 'renderer', 'index.html')
+    : path.join(__dirname, 'renderer', 'index.html');
+
+  mainWindow.loadFile(indexPath);
 
   mainWindow.once('ready-to-show', () => {
     if (mainWindow) {
@@ -224,12 +250,7 @@ function createWindow(): void {
   }
 }
 
-function initializeScheduler(): void {
-  schedulerManager = TaskSchedulerManager.getInstance();
-}
-
 app.whenReady().then(() => {
-  initializeScheduler();
   createWindow();
 });
 
@@ -251,9 +272,9 @@ app.on('activate', () => {
 ipcMain.handle('check-project-structure', async (): Promise<any> => {
   const paths = getProjectPaths();
   const checks: any = {};
-
+  debugger;
   const requiredItems = [
-    { key: 'package.json', path: paths.packageJson, type: 'file' },
+    // { key: 'package.json', path: paths.packageJson, type: 'file' },
     { key: 'playwright.config.ts', path: paths.configFile, type: 'file' },
     { key: 'src/tests', path: paths.testsDir, type: 'directory' },
     { key: 'src/data-driven', path: paths.dataDir, type: 'directory' },
@@ -441,64 +462,17 @@ ipcMain.handle('save-env-file', async (event: any, envVariables: any): Promise<a
 
 // Ejecutar tests con UI
 ipcMain.handle('run-tests-ui', async (): Promise<any> => {
-  const paths = getProjectPaths();
-
-  try {
-    // Verificar que playwright esté instalado
-    const playwrightBin = path.join(paths.nodeModules, '.bin',
-      process.platform === 'win32' ? 'playwright.cmd' : 'playwright');
-
-    if (!fs.existsSync(playwrightBin)) {
-      return {
-        success: false,
-        error: 'Playwright no está instalado. Verifique las dependencias.'
-      };
-    }
-
-    const result = await executeCommand('npx', ['playwright', 'test', '--ui'], {
-      cwd: paths.basePath,
-      stdio: 'inherit',
-      detached: true,
-      timeout: 10000
-    });
-
-    return result;
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
+  return runPlaywright(['test', '--ui'], { detached: true });
 });
 
 // Ejecutar tests automáticamente
 ipcMain.handle('run-tests', async (): Promise<any> => {
-  const paths = getProjectPaths();
-
-  try {
-    const result = await executeCommand('npx', ['playwright', 'test'], {
-      cwd: paths.basePath,
-      onData: 'test-output'
-    });
-
-    return result;
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
+  return runPlaywright(['test'], { onData: 'test-output' });
 });
 
 // Mostrar reporte
 ipcMain.handle('show-report', async (): Promise<any> => {
-  const paths = getProjectPaths();
-
-  try {
-    const result = await executeCommand('npx', ['playwright', 'show-report'], {
-      cwd: paths.basePath,
-      stdio: 'inherit',
-      detached: true
-    });
-
-    return result;
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
+  return runPlaywright(['show-report', 'reports/playwright-report'], { detached: true });
 });
 
 // ======================== UTILIDADES ========================
@@ -540,7 +514,7 @@ ipcMain.handle('verify-installation', async (): Promise<any> => {
     checks.nodeCheck = {}
     checks.nodeCheck.installed = result.success;
     checks.nodeCheck.version = result.success ? result.output.trim() : null;
-    checks.packageJson = fs.existsSync(paths.packageJson);
+    // checks.packageJson = fs.existsSync(paths.packageJson);
     checks.playwrightConfig = fs.existsSync(paths.configFile);
     checks.testsDirectory = fs.existsSync(paths.testsDir);
     checks.dataDirectory = fs.existsSync(paths.dataDir);
@@ -551,6 +525,20 @@ ipcMain.handle('verify-installation', async (): Promise<any> => {
     const playwrightBin = path.join(paths.nodeModules, '.bin',
       process.platform === 'win32' ? 'playwright.cmd' : 'playwright');
     checks.playwrightBinary = fs.existsSync(playwrightBin);
+
+    // Verificar si browsers están instalados
+    let browsersInstalled = false;
+    if (checks.playwrightBinary) {
+      const browserCheck = await executeCommand(playwrightBin, ['install', '--list']);
+      browsersInstalled = browserCheck.success && browserCheck.output.includes('chromium');
+    }
+    checks.playwrightBrowsers = browsersInstalled;
+
+    // Si no están, instalarlos automáticamente
+    if (!browsersInstalled) {
+      const browserInstall = await executeCommand(playwrightBin, ['install', '--with-deps']);
+      checks.playwrightBrowsersInstalledNow = browserInstall.success;
+    }
 
     // Contar archivos de test
     if (checks.testsDirectory) {
@@ -729,97 +717,3 @@ async function getExecutionHistory(days: number): Promise<any> {
 
   return history;
 }
-
-// IPC Handlers para scheduler
-ipcMain.handle('scheduler:getStatus', async (): Promise<any> => {
-  try {
-    if (!schedulerManager) {
-      return { success: false, error: 'Scheduler no inicializado' };
-    }
-    return await schedulerManager.getSchedulerStatus();
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-});
-
-ipcMain.handle('scheduler:createProfile', async (event: any, profile: any): Promise<any> => {
-  try {
-    if (!schedulerManager) {
-      return { success: false, error: 'Scheduler no inicializado' };
-    }
-    // Guardar perfil
-    const result = await saveProfile(profile);
-    if (result.success) {
-      // Crear tarea en Windows
-      const taskResult = await schedulerManager.createOrUpdateTask(profile);
-      return taskResult;
-    }
-    return result;
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-});
-
-ipcMain.handle('scheduler:deleteProfile', async (event: any, profileId: string): Promise<any> => {
-  try {
-    if (!schedulerManager) {
-      return { success: false, error: 'Scheduler no inicializado' };
-    }
-    const result = await schedulerManager.deleteTask(profileId);
-    if (result.success) {
-      await deleteProfile(profileId);
-    }
-    return result;
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-});
-
-ipcMain.handle('scheduler:runNow', async (event: any, profileId: string): Promise<any> => {
-  try {
-    if (!schedulerManager) {
-      return { success: false, error: 'Scheduler no inicializado' };
-    }
-    return await schedulerManager.runTaskNow(profileId);
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-});
-
-ipcMain.handle('scheduler:pauseAll', async (): Promise<any> => {
-  try {
-    if (!schedulerManager) {
-      return { success: false, error: 'Scheduler no inicializado' };
-    }
-    return await schedulerManager.pauseAllTasks();
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-});
-
-ipcMain.handle('scheduler:resumeAll', async (): Promise<any> => {
-  try {
-    if (!schedulerManager) {
-      return { success: false, error: 'Scheduler no inicializado' };
-    }
-    return await schedulerManager.resumeAllTasks();
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-});
-
-ipcMain.handle('scheduler:getProfiles', async (): Promise<any> => {
-  try {
-    return await getProfiles();
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-});
-
-ipcMain.handle('scheduler:getHistory', async (event: any, days: number = 7): Promise<any> => {
-  try {
-    return await getExecutionHistory(days);
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-});

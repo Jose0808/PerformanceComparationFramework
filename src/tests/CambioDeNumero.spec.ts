@@ -1,143 +1,174 @@
-import { test, expect, Page, BrowserContext } from '@playwright/test';
+import { test } from '@playwright/test';
 import { LoginPage } from '../pages/login.page';
-import { ConfigManager } from '../config/ConfigManager';
-import { MetricsCollector } from '../metrics/MetricsCollector';
-import { PerformanceComparator } from '../utils/PerformanceComparator';
-import { BasePage } from '../pages/base.page';
-import { ICambioDeNumero } from '../types/cambioDeNumero'
 import { DashboardPage } from '../pages/dashboard.page';
 import { Vista360IndividualPage } from '../pages/vista360Individual.page';
 import { BasicInfo } from '../pages/basicInfo.page';
 import { ChangeNumber } from '../pages/changeNumber.page';
 import { Checkout } from '../pages/checkout.page';
+import { ICambioDeNumero } from '../types/cambioDeNumero';
+import CambioDeNumero from '../data-driven/CambioDeNumero.json';
+import { BaseTestHelper } from './base-test.helper';
 import { TestTimer } from '../utils/timer.utils';
+import { ExecutionCollector } from '../collectors/ExecutionCollector';
 import { ReportGenerator } from '../utils/report.utils';
-import CambioDeNumero from '../data-driven/CambioDeNumero.json'
+import { ExecutionRun } from '../types/executionTypes';
+import { HeaderPage } from '../pages/header.page';
+import { SessionCache } from '../utils/sessionCache.utils'
+import { config } from 'process';
 
+class CambioNumeroTest extends BaseTestHelper {
+  public pages: any = {};
 
-test.describe('Cambio de Numero Flow', () => {
-  let config: ConfigManager = ConfigManager.getInstance();
-  let loginPage: LoginPage;
-  let dashboardPage: DashboardPage;
-  let vista360IndividualPage: Vista360IndividualPage;
-  let basicInfo: BasicInfo;
-  let changeNumber: ChangeNumber;
-  let checkout: Checkout;
+  setupPages(page: any) {
+    this.pages = {
+      header: new HeaderPage(page),
+      login: new LoginPage(page),
+      dashboard: new DashboardPage(page),
+      vista360: new Vista360IndividualPage(page),
+      basicInfo: new BasicInfo(page),
+      changeNumber: new ChangeNumber(page),
+      checkout: new Checkout(page)
+    };
+  }
 
-  test.beforeAll(() => {
-    console.log('🔧 Test Configuration:');
-    console.log(`Environment: ${config.test.environment}`);
-    console.log(`Iterations: ${config.test.iterations}`);
-    console.log(`Parallel instances: ${config.test.parallelInstances}`);
-    console.log(`App1: ${config.app1.name} (${config.app1.technology})`);
-    console.log(`App2: ${config.app2.name} (${config.app2.technology})`);
+  async executeFlow(app: any, timer: any, testData: ICambioDeNumero) {
+
+    await this.pages.login.login(app, timer, this.pages.dashboard);
+
+    await this.pages.dashboard.selectOnDashboard(
+      app,
+      timer,
+      "Operación Integrada (Nuevo)",
+      "Vista 360° Individual"
+    );
+
+    await this.pages.vista360.searchCustomer(app, timer, testData.filters);
+    await this.pages.basicInfo.selectSuscription(
+      app,
+      timer,
+      testData.SuscriptionRow,
+      "Cambio de número"
+    );
+    await this.pages.changeNumber.changeNumber(app, timer);
+    // await this.pages.checkout.checkoutValidate(app, timer);
+    // await this.pages.header.logout(app);
+  }
+}
+
+// Variables globales para el collector
+let collector: ExecutionCollector;
+let sessionId: string;
+
+test.describe('Cambio de Numero Performance Tests', () => {
+  const testHelper = new CambioNumeroTest();
+  const flowName = 'Cambio de Número';
+
+  test.beforeAll(async () => {
+    testHelper.logConfiguration();
+
+    collector = ExecutionCollector.getInstance('./performance-data');
+    sessionId = collector.startSession(
+      `CambioNumero-Performance-${new Date().toISOString().split('T')[0]}`
+    );
+    console.log(`🔧 Sesión iniciada: ${sessionId}`);
   });
 
-  // Test setup for consistent browser configuration
-  test.beforeEach(async ({ page, context }) => {
-    loginPage = new LoginPage(page);
-    dashboardPage = new DashboardPage(page);
-    vista360IndividualPage = new Vista360IndividualPage(page);
-    basicInfo = new BasicInfo(page);
-    changeNumber = new ChangeNumber(page);
-    checkout = new Checkout(page);
+  for (const app of testHelper.config.getAllApps()) {
+    test.describe(`${app.name}`, () => {
+      for (let iteration = 1; iteration <= testHelper.config.test.iterations; iteration++) {
+        test(`Latencia Ejecución ${iteration}`, async ({ browser, browserName }) => {
+          testHelper.logTestStart(app.name, iteration, flowName);
 
-    // Clear browser data between runs if configured
-    if (config.test.clearCacheBetweenRuns) {
-      await context.clearCookies();
-    }
-  });
+          const context = await SessionCache.loadContext(browser, app);
+          const page = await context.newPage();
+          testHelper.setupPages(page);
 
-  // Generate tests for each application dynamically
-  for (const app of config.getAllApps()) {
-    test.describe(`${app.name} Latency tests`, () => {
-      // Generate multiple test runs based on iteration count
-      for (let iteration = 1; iteration <= config.test.iterations; iteration++) {
-        test(`Cambio de Numero Performance - ${app.name} - Run ${iteration}`, async ({ page }) => {
-          console.log(`\n🚀 Starting ${app.name} - Run ${iteration}`);
-          console.log(`URL: ${app.baseUrl}`);
-
+          const timer = new TestTimer(page);
+          const testData = CambioDeNumero as ICambioDeNumero;
           let metrics: any;
-          // const metricsCollector = new MetricsCollector(page);
           let testError: string | undefined;
-          let timer = new TestTimer(page);
 
           try {
-            
-            const datacambiodenumero = CambioDeNumero as unknown as ICambioDeNumero;
-            await loginPage.login(app, timer);
-            // const menu = "Operación Integrada (Nuevo)";
-            // const subMenu = "Vista 360° Individual";
-            // await dashboardPage.selectOnDashboard(app, timer, menu, subMenu);
-            // await vista360IndividualPage.searchCustomer(app, timer, datacambiodenumero.filters);
-            // const menuSuscription = "Cambio de número";
-            // await basicInfo.selectSuscription(app, timer, datacambiodenumero.SuscriptionRow, menuSuscription);
-            // await changeNumber.changeNumber(app, timer);
+            await testHelper.executeFlow(app, timer, testData);
+            metrics = await testHelper.pages.dashboard.collectPerformanceMetrics();
 
-            // await checkout.checkoutValidate(app,timer);
+            testHelper.logResults(app.name, iteration, metrics, flowName);
+            testHelper.validateThresholds(timer, metrics);
 
-            // Collect performance metrics
-            metrics = await dashboardPage.collectPerformanceMetrics();
+            await testHelper.takeScreenshotIfEnabled(
+              testHelper.pages.login,
+              app.name,
+              iteration,
+              flowName
+            );
 
-            console.log(`✅ ${app.name} - Run ${iteration} completed successfully`);
-            console.log(`🏃 Cambio de número time: ${metrics.customMetrics.total_login_time}ms`);
-            console.log(`📊 LCP: ${metrics.lcp}ms, FCP: ${metrics.fcp}ms, TTFB: ${metrics.ttfb}ms`);
-
-            // Validate against thresholds
-            const thresholdCheck = timer.checkThresholds(metrics);
-
-            if (!thresholdCheck.passed) {
-              console.warn(`⚠️  Threshold violations detected:`);
-              thresholdCheck.failures.forEach((failure: any) => console.warn(`  - ${failure}`));
-            }
-
-            // Take screenshot for successful run if configured
-            if (config.reporting.generateScreenshots) {
-              await loginPage.takeScreenshot(`success_${app.name.replace(/\s+/g, '_')}_run_${iteration}`);
-            }
+            await SessionCache.saveContext(context, app.name);
 
           } catch (error) {
-            testError = error instanceof Error ? error.message : String(error);
-            console.error(`❌ ${app.name} - Run ${iteration} failed:`, testError);
+            testError = testHelper.handleTestError(error, app.name, iteration, flowName);
             throw error;
-
           } finally {
-            // Store performance data in test annotation for reporter
-            let data = timer.getExecution(app.name, 'Proceso completo de cambio de número');
-            test.info().annotations.push({
-              type: 'performance-data-' + app.name,
-              description: JSON.stringify({
-                data,
-                iteration: iteration,
-              })
-            });
-
-            if (metrics) {
-              test.info().annotations.push({
-                type: 'performance-data',
-                description: JSON.stringify({
-                  appName: app.name,
-                  metrics: metrics,
-                  iteration: iteration,
-                  error: testError
-                })
-              });
-            }
-
-            // Wait cooldown period between runs
-            if (iteration < config.test.iterations && config.test.cooldownBetweenRuns > 0) {
-              console.log(`⏳ Waiting ${config.test.cooldownBetweenRuns}ms before next run...`);
-              await page.waitForTimeout(config.test.cooldownBetweenRuns);
-            }
-
-            // Restart browser if configured frequency is reached
-            if (iteration % config.test.browserRestartFrequency === 0 && iteration < config.test.iterations) {
-              console.log('🔄 Browser restart triggered by configuration');
-              // Note: Browser restart is handled by Playwright's worker management
-            }
+            await testHelper.storePerformanceData(
+              app.name,
+              iteration,
+              timer,
+              metrics,
+              flowName,
+              testError,
+              {
+                browser: browserName,
+                viewport: JSON.stringify(page.viewportSize()),
+                userAgent: await page.evaluate(() => navigator.userAgent).catch(() => 'unknown')
+              }
+            );
+            await testHelper.handleCooldownAndRestart(iteration, page);
+            await context.close();
+            collector.endSession();
           }
         });
       }
     });
   }
+
+  // test.afterAll(async () => {
+  //   console.log(`After:`);
+  //   const session = collector.getSession(sessionId);
+  //   if (!session) return;
+
+  //   console.log(`📊 Sesión completada:`);
+  //   console.log(`   - Total runs: ${session.completedRuns}`);
+  //   console.log(`   - Apps probadas: ${[...new Set(session.runs.map(r => r.appName))].join(', ')}`);
+  //   console.log(`   - Duración: ${Math.round((new Date().getTime() - session.startTime.getTime()) / 1000)}s`);
+
+  //   // const groupedByApp = new Map<string, ExecutionRun[]>();
+  //   // session.runs.forEach(run => {
+  //   //   if (run.flowName !== flowName) return;
+  //   //   if (!groupedByApp.has(run.appName)) {
+  //   //     groupedByApp.set(run.appName, []);
+  //   //   }
+  //   //   groupedByApp.get(run.appName)!.push(run);
+  //   // });
+
+  //   // let a = groupedByApp.get('OnPremise');
+  //   // let b = groupedByApp.get('Cloud');
+  //   // if (!a || !b) return;
+
+  //   // let executiona = a[0].execution;
+  //   // let executionb = b[0].execution;
+  //   // const comparison = ReportGenerator.generateComparison(executiona, executionb);
+
+  //   // const fechaActual = new Date();
+  //   // const fechaFormateada = `${String(fechaActual.getDate()).padStart(2, '0')}-${String(
+  //   //   fechaActual.getMonth() + 1
+  //   // ).padStart(2, '0')}-${fechaActual.getFullYear()}-${String(
+  //   //   fechaActual.getHours()
+  //   // ).padStart(2, '0')}-${String(fechaActual.getMinutes()).padStart(2, '0')}`;
+
+  //   // const fileName = `./reports/${comparison.testName.replace(/\s+/g, '_')}/Reporte_${fechaFormateada}`;
+  //   // await ReportGenerator.generateHTMLReport(comparison, fileName);
+
+  //   collector.endSession();
+  //   console.log(`📊 Reporte generado y sesión finalizada`);
+  // });
+
 });

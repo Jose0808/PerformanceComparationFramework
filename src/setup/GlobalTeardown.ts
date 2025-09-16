@@ -134,7 +134,7 @@ async function generateFinalSummary(config: ConfigManager, result: FullResult): 
     console.log('  ✅ Final summary generated');
 
     // Also create a human-readable summary
-    await generateHumanReadableSummary(config, summary);
+    await generateSummary(config, summary);
 
   } catch (error) {
     console.error('  ❌ Final summary generation failed:', error);
@@ -144,7 +144,7 @@ async function generateFinalSummary(config: ConfigManager, result: FullResult): 
 /**
  * Generate human-readable summary
  */
-async function generateHumanReadableSummary(config: ConfigManager, summary: any): Promise<void> {
+async function generateSummary(config: ConfigManager, summary: any): Promise<void> {
   const summaryLines = [
     '='.repeat(60),
     'Latency test EXECUTION SUMMARY',

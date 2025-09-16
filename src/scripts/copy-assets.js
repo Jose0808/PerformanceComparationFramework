@@ -1,23 +1,13 @@
-const fs = require("fs");
+// src/scripts/copy-assets.js
+const fs = require("fs-extra");
 const path = require("path");
 
-function copyRecursive(src, dest, exts = []) {
-  if (!fs.existsSync(dest)) {
-    fs.mkdirSync(dest, { recursive: true });
-  }
+function copyAssets() {
+  const source = path.resolve(__dirname, "../../electron/renderer");
+  const destination = path.resolve(__dirname, "../../dist/electron/renderer");
 
-  for (const item of fs.readdirSync(src)) {
-    const srcPath = path.join(src, item);
-    const destPath = path.join(dest, item);
-
-    if (fs.lstatSync(srcPath).isDirectory()) {
-      copyRecursive(srcPath, destPath, exts);
-    } else if (exts.length === 0 || exts.some(ext => srcPath.endsWith(ext))) {
-      fs.copyFileSync(srcPath, destPath);
-    }
-  }
+  fs.copySync(source, destination, { overwrite: true });
+  console.log("✅ Assets copiados a dist/electron/renderer");
 }
 
-copyRecursive("electron/renderer", "dist/electron/renderer", [".html", ".css", ".js"]);
-fs.copyFileSync(".env", "dist/.env");
-console.log("✅ Assets copiados a dist/");
+copyAssets();

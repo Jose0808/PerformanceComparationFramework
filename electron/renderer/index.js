@@ -212,6 +212,7 @@ function validateJson() {
         document.getElementById('json-status').innerHTML =
             '<span style="color: #4caf50;">✅ JSON válido</span>';
     } catch (error) {
+        console.log(error.message);
         document.getElementById('json-status').innerHTML =
             `<span style="color: #f44336;">❌ Error: ${error.message}</span>`;
     }
@@ -255,6 +256,7 @@ async function createNewDataFile() {
             showMessage('success', `✅ Archivo ${fullFilename} creado`);
             loadDataFiles();
         } else {
+            console.log(error.message);
             showMessage('error', `❌ Error: ${result.error}`);
         }
     } catch (error) {
@@ -411,6 +413,7 @@ async function runTestsUI() {
             document.getElementById('ui-instructions').classList.remove('hidden');
             showMessage('success', '🎮 Playwright UI iniciado correctamente');
         } else {
+            console.log(error.message);
             showMessage('error', `❌ Error: ${result.error || result.output}`);
         }
     } catch (error) {
@@ -426,12 +429,12 @@ async function runAllTests() {
     if (isTestRunning) return;
 
     const btn = document.getElementById('run-tests-btn');
-    const stopBtn = document.getElementById('stop-tests-btn');
+    // const stopBtn = document.getElementById('stop-tests-btn');
     const console = document.getElementById('test-console');
 
     isTestRunning = true;
     btn.disabled = true;
-    stopBtn.disabled = false;
+    // stopBtn.disabled = false;
     btn.textContent = 'Ejecutando...';
     console.textContent = '';
 
@@ -472,7 +475,7 @@ async function runAllTests() {
 
     isTestRunning = false;
     btn.disabled = false;
-    stopBtn.disabled = true;
+    // stopBtn.disabled = true;
     btn.textContent = '🚀 Ejecutar Todas las Pruebas';
 }
 
@@ -632,6 +635,7 @@ function duplicateCurrentFile() {
                     showMessage('success', `✅ Archivo duplicado: ${fullNewName}`);
                     loadDataFiles();
                 } else {
+                    console.log(error.message);
                     showMessage('error', `❌ Error: ${result.error}`);
                 }
             });
@@ -939,8 +943,6 @@ function updateStatusDisplay() {
     const statusText = document.getElementById('status-text');
     const nextExecution = document.getElementById('next-execution');
     const lastExecution = document.getElementById('last-execution');
-
-    debugger;
     if (!statusText) return;
 
     if (schedulerStatus?.isRunning) {

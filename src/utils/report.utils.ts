@@ -75,7 +75,18 @@ export class ReportGenerator {
         }
 
         const htmlContent = this.generateHTMLContent(comparison);
-        const fileName = `${comparison.testName.replace(/\s+/g, '_')}_${Date.now()}.html`;
+        const fechaActual = new Date(); // Crea un nuevo objeto de fecha y hora
+
+        // Obtiene los componentes individuales de la fecha y hora
+        const dia = String(fechaActual.getDate()).padStart(2, '0');
+        const mes = String(fechaActual.getMonth() + 1).padStart(2, '0');
+        const anio = fechaActual.getFullYear();
+        const horas = String(fechaActual.getHours()).padStart(2, '0');
+        const minutos = String(fechaActual.getMinutes()).padStart(2, '0');
+
+        // Construye la cadena en el formato deseado DD-MM-YYYY-HH-MM
+        const fechaFormateada = `${dia}-${mes}-${anio}-${horas}-${minutos}`;
+        const fileName = `${comparison.testName.replace(/\s+/g, '_')}_${fechaFormateada}.html`;
         const filePath = path.join(outputPath, fileName);
 
         fs.writeFileSync(filePath, htmlContent);
@@ -128,11 +139,12 @@ export class ReportGenerator {
     }
 
     private static generateHTMLContent(comparison: ComparisonReport): string {
-        const onpremiseFaster = comparison.comparison.fasterEnvironment === 'onpremise';
-        const safeOnpremise = comparison.onpremise || { steps: [], totalDuration: 0, consoleLogs: [], jsErrors: [], networkLogs: [] };
-        const safeCloud = comparison.cloud || { steps: [], totalDuration: 0, consoleLogs: [], jsErrors: [], networkLogs: [] };
+        try {
+            const onpremiseFaster = comparison.comparison.fasterEnvironment === 'onpremise';
+            const safeOnpremise = comparison.onpremise || { steps: [], totalDuration: 0, consoleLogs: [], jsErrors: [], networkLogs: [] };
+            const safeCloud = comparison.cloud || { steps: [], totalDuration: 0, consoleLogs: [], jsErrors: [], networkLogs: [] };
 
-        return `
+            return `
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -142,6 +154,296 @@ export class ReportGenerator {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.js"></script>
     <style>
+        ${this.generateCSSContent()}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>
+                <span>📊</span>
+                Reporte de Comparación de Performance
+            </h1>
+            <h2>${comparison.testName}</h2>
+            <p>Generado el: ${new Date().toLocaleString('es-ES', {
+                dateStyle: 'full',
+                timeStyle: 'medium'
+            })}</p>
+        </div>
+
+        <div class="summary">
+            <div class="summary-card ${onpremiseFaster && comparison.onpremise.totalDuration > 0 ? 'winner' : ''} ${comparison.onpremise.totalDuration === 0 ? 'error' : ''}">
+                <h3>🏢 On-Premise</h3>
+                ${comparison.onpremise.totalDuration > 0
+                    ? `<div class="duration">${comparison.onpremise.totalDuration.toFixed(2)}s</div>`
+                    : `<div class="error-message">❌ Falló la ejecución</div>`
+                }
+                ${onpremiseFaster && comparison.onpremise.totalDuration > 0 ? '<div class="winner-badge"><span>🏆</span> MÁS RÁPIDO</div>' : ''}
+            </div>
+            <div class="summary-card ${!onpremiseFaster && comparison.cloud.totalDuration > 0 ? 'winner' : ''} ${comparison.cloud.totalDuration === 0 ? 'error' : ''}">
+                <h3>☁️ Cloud</h3>
+                ${comparison.cloud.totalDuration > 0
+                    ? `<div class="duration">${comparison.cloud.totalDuration.toFixed(2)}s</div>`
+                    : `<div class="error-message">❌ Falló la ejecución</div>`
+                }
+                ${!onpremiseFaster && comparison.cloud.totalDuration > 0 ? '<div class="winner-badge"><span>🏆</span> MÁS RÁPIDO</div>' : ''}
+            </div>
+        </div>
+
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-value">${comparison.comparison.totalDifference.toFixed(2)}s</div>
+                <div class="metric-label">Diferencia Total</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">${Math.max(comparison.onpremise.steps.length, comparison.cloud.steps.length)}</div>
+                <div class="metric-label">Pasos Ejecutados</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">${(comparison.onpremise.totalDuration > 0 && comparison.cloud.totalDuration > 0)
+                    ? ((comparison.comparison.totalDifference / Math.max(comparison.onpremise.totalDuration, comparison.cloud.totalDuration)) * 100).toFixed(1)
+                    : '0'}%</div>
+                <div class="metric-label">Mejora de Performance</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">${comparison.onpremise.steps.reduce((acc: number, step: any) => acc + (step.subSteps?.length || 0), 0) +
+                comparison.cloud.steps.reduce((acc: number, step: any) => acc + (step.subSteps?.length || 0), 0)}</div>
+                <div class="metric-label">Sub-pasos Totales</div>
+            </div>
+        </div>
+
+        ${(comparison.onpremise.totalDuration > 0 || comparison.cloud.totalDuration > 0) ? `
+        <div class="chart-container">
+            <div class="chart-header">
+                <h3>Comparación Visual por Pasos</h3>
+                <p>Tiempo de ejecución en segundos para cada paso del proceso</p>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="comparisonChart" height="120"></canvas>
+            </div>
+        </div>
+        ` : ''}
+
+        <div class="steps-detail">
+            <div class="steps-header">
+                <h3>📋 Detalle por Pasos</h3>
+            </div>
+            ${[...comparison.onpremise.steps, ...comparison.cloud.steps.filter(cloudStep =>
+                    !comparison.onpremise.steps.find(onpremiseStep => onpremiseStep.name === cloudStep.name)
+                )].map((step: any) => {
+                    const isFromOnpremise = comparison.onpremise.steps.includes(step);
+                    const counterpartStep = isFromOnpremise
+                        ? comparison.cloud.steps.find((s: any) => s.name === step.name)
+                        : comparison.onpremise.steps.find((s: any) => s.name === step.name);
+
+                    const stepComparison = comparison.comparison.stepComparisons.find((s: any) => s.stepName === step.name);
+
+                    return `
+                <details class="step-item">
+                    <summary class="step-header">
+                        <div class="step-name">
+                            📌 ${step.name}
+                        </div>
+                        <div class="step-metrics">
+                            <span class="duration-badge onpremise" title="On-Premise">On-Premise: ${isFromOnpremise ? step.duration?.toFixed(2) || '0.00' : counterpartStep?.duration?.toFixed(2) || '❌'
+                        }s</span>
+                            <span class="duration-badge cloud" title="Cloud">Cloud: ${!isFromOnpremise ? step.duration?.toFixed(2) || '0.00' : counterpartStep?.duration?.toFixed(2) || '❌'
+                        }s</span>
+                            ${stepComparison ? `
+                                <div class="performance-indicator ${stepComparison.fasterEnvironment === 'onpremise' ? 'faster' : 'slower'}">
+                                    ${stepComparison.fasterEnvironment === 'onpremise' ? '⚡ Más Rápido' : '🐌 Más Lento'}
+                                </div>
+                                <span class="winner-badge">🏆 ${stepComparison.fasterEnvironment.toUpperCase()}</span>
+                            ` : ''}
+                        </div>
+                    </summary>
+                    <div class="substeps">
+                        ${(step.subSteps || []).map((subStep: any) => {
+                            const cloudSubStep = counterpartStep?.subSteps?.find((s: any) => s.name === subStep.name);
+                            const isSubStepFaster = cloudSubStep && subStep.duration < cloudSubStep.duration;
+
+                            return `
+                            <div class="substep-item">
+                                <div class="substep-header">
+                                    <div class="substep-name">
+                                        └─ ${subStep.name}
+                                    </div>
+                                    <div class="substep-durations">
+                                        <span class="duration-badge onpremise" title="On-Premise">${isFromOnpremise ? (subStep.duration?.toFixed(2) || "❌") : (cloudSubStep?.duration?.toFixed(2) || "❌")
+                                }s</span>
+                                        <span class="duration-badge cloud" title="Cloud">${!isFromOnpremise ? (subStep.duration?.toFixed(2) || "❌") : (cloudSubStep?.duration?.toFixed(2) || "❌")
+                                }s</span>
+                                        ${cloudSubStep ? `
+                                            <div class="performance-indicator ${isSubStepFaster ? 'faster' : 'slower'}">
+                                                ${isSubStepFaster ? '⚡' : '🐌'}
+                                            </div>
+                                        ` : ''}
+                                    </div>
+                                </div>
+
+                                <!-- Console Logs -->
+                                <details class="network-request-item">
+                                    <summary class="substep-network-header">
+                                    <div class="substep-name">
+                                    └─ 📜 Console Logs
+                                    </div>
+                                    <div class="substep-durations">
+<span class="duration-badge onpremise" title="On-Premise">${isFromOnpremise ? (subStep.consoleLogs?.length || "❌") : (cloudSubStep?.consoleLogs?.length || "❌")
+                                }</span>
+                                        <span class="duration-badge cloud" title="Cloud">${!isFromOnpremise ? (subStep.consoleLogs?.length || "❌") : (cloudSubStep?.consoleLogs?.length || "❌")
+                                }</span>
+                                    </div>
+                                    </summary>
+                                    <div class="substeps">
+                                        ${subStep.consoleLogs && subStep.consoleLogs.length > 0
+                                    ? `
+                                                <div style="display: grid; grid-template-columns: 1fr; gap: 20px; padding: 16px;">
+                                                    <div>
+                                                        <h4 style="margin-bottom: 8px; color: var(--primary);">OnPremise (${subStep.consoleLogs.length || 0})</h4>
+                                                        <pre style="background: var(--surface-alt); padding: 12px; border-radius: 8px; font-size: 0.875rem; max-height: 200px; overflow-y: auto;">${subStep.consoleLogs.join("\\n") || "❌"}</pre>
+                                                    </div>
+                                                    <div>
+                                                        <h4 style="margin-bottom: 8px; color: var(--warning);">Cloud (${cloudSubStep?.consoleLogs?.length || 0})</h4>
+                                                        <pre style="background: var(--surface-alt); padding: 12px; border-radius: 8px; font-size: 0.875rem; max-height: 200px; overflow-y: auto;">${cloudSubStep?.consoleLogs?.join("\\n") || "❌"}</pre>
+                                                    </div>
+                                                </div>
+                                            `
+                                    : `<div style="padding: 16px; text-align: center; color: var(--success);">✅ No se registraron console logs</div>`
+                                }
+                                    </div>
+                                </details>
+
+                                <!-- JS Errors -->
+                                <details class="network-request-item">
+                                    <summary class="substep-network-header">                                    
+                                    <div class="substep-name">
+                                    └─ ❌ Errores de Consola
+                                    </div>
+                                    <div class="substep-durations">
+<span class="duration-badge onpremise" title="On-Premise">${isFromOnpremise ? (subStep.jsErrors?.length || "❌") : (cloudSubStep?.jsErrors?.length || "❌")
+                                }</span>
+                                        <span class="duration-badge cloud" title="Cloud">${!isFromOnpremise ? (subStep.jsErrors?.length || "❌") : (cloudSubStep?.jsErrors?.length || "❌")
+                                }</span>
+                                    </div>
+                                    </summary>
+                                    <div class="substeps">
+                                        ${subStep.jsErrors && subStep.jsErrors.length > 0
+                                    ? `
+                                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 16px;">
+                                                    <div>
+                                                        <h4 style="margin-bottom: 8px; color: var(--primary);">OnPremise (${subStep.jsErrors.length})</h4>
+                                                        <pre style="background: rgba(239, 68, 68, 0.1); padding: 12px; border-radius: 8px; font-size: 0.875rem; max-height: 200px; overflow-y: auto; color: var(--error);">${subStep.jsErrors.join("\\n") || "❌"}</pre>
+                                                    </div>
+                                                    <div>
+                                                        <h4 style="margin-bottom: 8px; color: var(--warning);">Cloud (${cloudSubStep?.jsErrors?.length || 0})</h4>
+                                                        <pre style="background: rgba(239, 68, 68, 0.1); padding: 12px; border-radius: 8px; font-size: 0.875rem; max-height: 200px; overflow-y: auto; color: var(--error);">${cloudSubStep?.jsErrors?.join("\\n") || "❌"}</pre>
+                                                    </div>
+                                                </div>
+                                            `
+                                    : `<div style="padding: 16px; text-align: center; color: var(--success);">✅ No se detectaron errores de consola</div>`
+                                }
+                                    </div>
+                                </details>
+
+                                <!-- Network Requests Comparison -->
+                                <details class="network-request-item">
+                                    <summary class="substep-network-header">
+                                        <div style="substep-name">
+                                            └─ 🌐 Network Requests                                            
+                                        </div>
+                                            <div class="substep-durations">
+                                                <span class="duration-badge onpremise" title="On-Premise">${isFromOnpremise ? (subStep.networkLogs?.length || "❌") : (cloudSubStep?.networkLogs?.length || "❌")}</span>
+                                                <span class="duration-badge cloud" title="Cloud">${!isFromOnpremise ? (subStep.networkLogs?.length || "❌") : (cloudSubStep?.networkLogs?.length || "❌")}</span>
+                                            </div>
+                                    </summary>
+                                    <div class="substeps">
+                                        ${(() => {
+                                    const networkComparisons = this.compareNetworkRequests(
+                                        subStep.networkLogs || [],
+                                        cloudSubStep?.networkLogs || []
+                                    );
+
+                                    if (networkComparisons.length === 0) {
+                                        return '<div style="padding: 16px; text-align: center; color: var(--success);">✅ No se realizaron peticiones de red</div>';
+                                    }
+
+                                    return networkComparisons.map(comparison => {
+                                        const onpremiseReq = comparison.onpremise;
+                                        const cloudReq = comparison.cloud;
+                                        const hasOnpremise = !!onpremiseReq;
+                                        const hasCloud = !!cloudReq;
+
+                                        return `
+                                                <div class="network-request-subItem">
+                                                    <div class="network-url" title="${comparison.url}">
+                                                        <span class="method-badge">${comparison.method}</span>
+                                                        ${comparison?.urlName || "NA"}
+                                                        ${onpremiseReq?.urlName ? (`<span style="display:none;" id="OnPremise-${onpremiseReq?.urlName || "NA"}">${onpremiseReq?.curl}</span>
+                                                        <button class="copy-button onpremise" title="On-Premise" onclick=copiarAlPortapapeles("OnPremise-${onpremiseReq?.urlName || "NA"}")>📋</button>`) : ""}
+                                                        ${cloudReq?.urlName ? (`<span style="display:none;" id="Cloud-${cloudReq?.urlName || "NA"}">${cloudReq?.curl}</span>
+                                                        <button class="copy-button cloud" title="Cloud" onclick=copiarAlPortapapeles("Cloud-${cloudReq?.urlName || "NA"}")>📋</button>`) : ""}
+                                                    </div>
+                                                    <div class="network-metrics">
+                                                        <div style="display: flex; flex-direction: column; gap: 4px; text-align: center;">
+                                                            <span style="font-size: 0.75rem; color: var(--text-muted);">Duración</span>
+                                                            <div style="display: flex; gap: 8px;">
+                                                                <span class="duration-badge onpremise" title="On-Premise">${hasOnpremise ? `${onpremiseReq.duration.toFixed(2) || 0}ms` : '❌'}</span>
+                                                                <span class="duration-badge cloud" title="Cloud">${hasCloud ? `${cloudReq.duration.toFixed(2) || 0}ms` : '❌'}</span>
+                                                            </div>
+                                                        </div>
+                                                        <div style="display: flex; flex-direction: column; gap: 4px; text-align: center;">
+                                                            <span style="font-size: 0.75rem; color: var(--text-muted);">Status</span>
+                                                            <div style="display: flex; gap: 8px;">
+                                                                <span class="status-badge status-${Math.floor((onpremiseReq?.status || 0) / 100) * 100}" title="On-Premise">
+                                                                    ${hasOnpremise ? (onpremiseReq.status || '—') : '❌'}
+                                                                </span>
+                                                                <span class="status-badge status-${Math.floor((cloudReq?.status || 0) / 100) * 100}" title="Cloud">
+                                                                    ${hasCloud ? (cloudReq.status || '—') : '❌'}
+                                                                </span>
+                                                            </div>
+                                                        </div>                                                                                                            
+                                                        ${hasOnpremise && hasCloud ? `
+                                                            <div class="performance-indicator ${(onpremiseReq.duration || 0) < (cloudReq.duration || 0) ? 'faster' : 'slower'}">
+                                                                ${(onpremiseReq.duration || 0) < (cloudReq.duration || 0) ? '⚡ On-Premise' : '⚡ Cloud'}
+                                                            </div>
+                                                        ` : ''}
+                                                    </div>
+                                                </div>
+                                                `;
+                                    }).join('');
+                                })()}
+                                    </div>
+                                </details>
+                            </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </details>
+                `;
+                }).join('')}
+        </div>
+
+        <div class="footer">
+            <p>Reporte generado automáticamente por el Sistema de Análisis de Performance</p>
+        </div>
+    </div>
+
+    ${(comparison.onpremise.totalDuration > 0 || comparison.cloud.totalDuration > 0) ? `
+    <script>
+        ${this.generateJSContent(comparison)}
+    </script>
+    ` : ''}
+</body>
+</html>`;
+
+        } catch (error) {
+            console.log(error);
+            throw new Error("Error al crear reporte HTML - Error " + error);
+        }
+    }
+
+    private static generateCSSContent(): string {
+        return `
         :root {
             --primary: #6366f1;
             --primary-dark: #4f46e5;
@@ -474,6 +776,16 @@ export class ReportGenerator {
             color: #d97706;
         }
 
+        .copy-button{
+            padding: 10px 10px;
+            border: none;
+            border-radius: 5px;
+        }
+
+        .copy-button:hover {
+            background-color: rgb(140 109 77);;
+        }
+
         .substeps {
             padding: 0;
         }
@@ -522,6 +834,8 @@ export class ReportGenerator {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            border-top: 1px solid var(--border);
+            padding: 15px 0px;
         }
 
         .network-request-item:hover {
@@ -707,284 +1021,31 @@ export class ReportGenerator {
         .summary-card {
             animation: fadeInUp 0.8s ease forwards;
         }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>
-                <span>📊</span>
-                Reporte de Comparación de Performance
-            </h1>
-            <h2>${comparison.testName}</h2>
-            <p>Generado el: ${new Date().toLocaleString('es-ES', {
-            dateStyle: 'full',
-            timeStyle: 'medium'
-        })}</p>
-        </div>
+`
+    }
 
-        <div class="summary">
-            <div class="summary-card ${onpremiseFaster && comparison.onpremise.totalDuration > 0 ? 'winner' : ''} ${comparison.onpremise.totalDuration === 0 ? 'error' : ''}">
-                <h3>🏢 On-Premise</h3>
-                ${comparison.onpremise.totalDuration > 0
-                ? `<div class="duration">${comparison.onpremise.totalDuration.toFixed(2)}s</div>`
-                : `<div class="error-message">❌ Falló la ejecución</div>`
-            }
-                ${onpremiseFaster && comparison.onpremise.totalDuration > 0 ? '<div class="winner-badge"><span>🏆</span> MÁS RÁPIDO</div>' : ''}
-            </div>
-            <div class="summary-card ${!onpremiseFaster && comparison.cloud.totalDuration > 0 ? 'winner' : ''} ${comparison.cloud.totalDuration === 0 ? 'error' : ''}">
-                <h3>☁️ Cloud</h3>
-                ${comparison.cloud.totalDuration > 0
-                ? `<div class="duration">${comparison.cloud.totalDuration.toFixed(2)}s</div>`
-                : `<div class="error-message">❌ Falló la ejecución</div>`
-            }
-                ${!onpremiseFaster && comparison.cloud.totalDuration > 0 ? '<div class="winner-badge"><span>🏆</span> MÁS RÁPIDO</div>' : ''}
-            </div>
-        </div>
+    private static generateJSContent(comparison: ComparisonReport): string {
+        return `
+        function copiarAlPortapapeles(idElemento) {
+            const textoACopiar = document.getElementById(idElemento).innerText;
+            navigator.clipboard.writeText(textoACopiar)
+            .then(() => {
+            // Opcional: Mostrar un mensaje de éxito
+            alert("¡Texto copiado al portapapeles!");
+            })
+            .catch(err => {
+            console.error('Error al copiar texto: ', err);
+            alert("Hubo un error al copiar el texto.");
+            });
+        }
 
-        <div class="metrics-grid">
-            <div class="metric-card">
-                <div class="metric-value">${comparison.comparison.totalDifference.toFixed(2)}s</div>
-                <div class="metric-label">Diferencia Total</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-value">${Math.max(comparison.onpremise.steps.length, comparison.cloud.steps.length)}</div>
-                <div class="metric-label">Pasos Ejecutados</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-value">${(comparison.onpremise.totalDuration > 0 && comparison.cloud.totalDuration > 0)
-                ? ((comparison.comparison.totalDifference / Math.max(comparison.onpremise.totalDuration, comparison.cloud.totalDuration)) * 100).toFixed(1)
-                : '0'}%</div>
-                <div class="metric-label">Mejora de Performance</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-value">${comparison.onpremise.steps.reduce((acc: number, step: any) => acc + (step.subSteps?.length || 0), 0) +
-            comparison.cloud.steps.reduce((acc: number, step: any) => acc + (step.subSteps?.length || 0), 0)}</div>
-                <div class="metric-label">Sub-pasos Totales</div>
-            </div>
-        </div>
-
-        ${(comparison.onpremise.totalDuration > 0 || comparison.cloud.totalDuration > 0) ? `
-        <div class="chart-container">
-            <div class="chart-header">
-                <h3>Comparación Visual por Pasos</h3>
-                <p>Tiempo de ejecución en segundos para cada paso del proceso</p>
-            </div>
-            <div class="chart-wrapper">
-                <canvas id="comparisonChart" height="120"></canvas>
-            </div>
-        </div>
-        ` : ''}
-
-        <div class="steps-detail">
-            <div class="steps-header">
-                <h3>📋 Detalle por Pasos</h3>
-            </div>
-            ${[...comparison.onpremise.steps, ...comparison.cloud.steps.filter(cloudStep =>
-                !comparison.onpremise.steps.find(onpremiseStep => onpremiseStep.name === cloudStep.name)
-            )].map((step: any) => {
-                const isFromOnpremise = comparison.onpremise.steps.includes(step);
-                const counterpartStep = isFromOnpremise
-                    ? comparison.cloud.steps.find((s: any) => s.name === step.name)
-                    : comparison.onpremise.steps.find((s: any) => s.name === step.name);
-
-                const stepComparison = comparison.comparison.stepComparisons.find((s: any) => s.stepName === step.name);
-
-                return `
-                <details class="step-item">
-                    <summary class="step-header">
-                        <div class="step-name">
-                            📌 ${step.name}
-                        </div>
-                        <div class="step-metrics">
-                            <span class="duration-badge onpremise" title="On-Premise">On-Premise: ${isFromOnpremise ? step.duration?.toFixed(2) || '0.00' : counterpartStep?.duration?.toFixed(2) || '❌'
-                    }s</span>
-                            <span class="duration-badge cloud" title="Cloud">Cloud: ${!isFromOnpremise ? step.duration?.toFixed(2) || '0.00' : counterpartStep?.duration?.toFixed(2) || '❌'
-                    }s</span>
-                            ${stepComparison ? `
-                                <div class="performance-indicator ${stepComparison.fasterEnvironment === 'onpremise' ? 'faster' : 'slower'}">
-                                    ${stepComparison.fasterEnvironment === 'onpremise' ? '⚡ Más Rápido' : '🐌 Más Lento'}
-                                </div>
-                                <span class="winner-badge">🏆 ${stepComparison.fasterEnvironment.toUpperCase()}</span>
-                            ` : ''}
-                        </div>
-                    </summary>
-                    <div class="substeps">
-                        ${(step.subSteps || []).map((subStep: any) => {
-                        const cloudSubStep = counterpartStep?.subSteps?.find((s: any) => s.name === subStep.name);
-                        const isSubStepFaster = cloudSubStep && subStep.duration < cloudSubStep.duration;
-
-                        return `
-                            <div class="substep-item">
-                                <div class="substep-header">
-                                    <div class="substep-name">
-                                        └─ ${subStep.name}
-                                    </div>
-                                    <div class="substep-durations">
-                                        <span class="duration-badge onpremise" title="On-Premise">${isFromOnpremise ? (subStep.duration?.toFixed(2) || "❌") : (cloudSubStep?.duration?.toFixed(2) || "❌")
-                            }s</span>
-                                        <span class="duration-badge cloud" title="Cloud">${!isFromOnpremise ? (subStep.duration?.toFixed(2) || "❌") : (cloudSubStep?.duration?.toFixed(2) || "❌")
-                            }s</span>
-                                        ${cloudSubStep ? `
-                                            <div class="performance-indicator ${isSubStepFaster ? 'faster' : 'slower'}">
-                                                ${isSubStepFaster ? '⚡' : '🐌'}
-                                            </div>
-                                        ` : ''}
-                                    </div>
-                                </div>
-
-                                <!-- Console Logs -->
-                                <details class="network-request-item">
-                                    <summary class="substep-network-header">
-                                    <div class="substep-name">
-                                    └─ 📜 Console Logs
-                                    </div>
-                                    <div class="substep-durations">
-<span class="duration-badge onpremise" title="On-Premise">${isFromOnpremise ? (subStep.consoleLogs?.length || "❌") : (cloudSubStep?.consoleLogs?.length || "❌")
-                            }</span>
-                                        <span class="duration-badge cloud" title="Cloud">${!isFromOnpremise ? (subStep.consoleLogs?.length || "❌") : (cloudSubStep?.consoleLogs?.length || "❌")
-                            }</span>
-                                    </div>
-                                    </summary>
-                                    <div class="substeps">
-                                        ${subStep.consoleLogs && subStep.consoleLogs.length > 0
-                                ? `
-                                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 16px;">
-                                                    <div>
-                                                        <h4 style="margin-bottom: 8px; color: var(--primary);">OnPremise (${subStep.consoleLogs.length || 0})</h4>
-                                                        <pre style="background: var(--surface-alt); padding: 12px; border-radius: 8px; font-size: 0.875rem; max-height: 200px; overflow-y: auto;">${subStep.consoleLogs.join("\\n") || "❌"}</pre>
-                                                    </div>
-                                                    <div>
-                                                        <h4 style="margin-bottom: 8px; color: var(--warning);">Cloud (${cloudSubStep?.consoleLogs?.length || 0})</h4>
-                                                        <pre style="background: var(--surface-alt); padding: 12px; border-radius: 8px; font-size: 0.875rem; max-height: 200px; overflow-y: auto;">${cloudSubStep?.consoleLogs?.join("\\n") || "❌"}</pre>
-                                                    </div>
-                                                </div>
-                                            `
-                                : `<div style="padding: 16px; text-align: center; color: var(--success);">✅ No se registraron console logs</div>`
-                            }
-                                    </div>
-                                </details>
-
-                                <!-- JS Errors -->
-                                <details class="network-request-item">
-                                    <summary class="substep-network-header">                                    
-                                    <div class="substep-name">
-                                    └─ ❌ Errores de Consola
-                                    </div>
-                                    <div class="substep-durations">
-<span class="duration-badge onpremise" title="On-Premise">${isFromOnpremise ? (subStep.jsErrors?.length || "❌") : (cloudSubStep?.jsErrors?.length || "❌")
-                            }</span>
-                                        <span class="duration-badge cloud" title="Cloud">${!isFromOnpremise ? (subStep.jsErrors?.length || "❌") : (cloudSubStep?.jsErrors?.length || "❌")
-                            }</span>
-                                    </div>
-                                    </summary>
-                                    <div class="substeps">
-                                        ${subStep.jsErrors && subStep.jsErrors.length > 0
-                                ? `
-                                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 16px;">
-                                                    <div>
-                                                        <h4 style="margin-bottom: 8px; color: var(--primary);">OnPremise (${subStep.jsErrors.length})</h4>
-                                                        <pre style="background: rgba(239, 68, 68, 0.1); padding: 12px; border-radius: 8px; font-size: 0.875rem; max-height: 200px; overflow-y: auto; color: var(--error);">${subStep.jsErrors.join("\\n") || "❌"}</pre>
-                                                    </div>
-                                                    <div>
-                                                        <h4 style="margin-bottom: 8px; color: var(--warning);">Cloud (${cloudSubStep?.jsErrors?.length || 0})</h4>
-                                                        <pre style="background: rgba(239, 68, 68, 0.1); padding: 12px; border-radius: 8px; font-size: 0.875rem; max-height: 200px; overflow-y: auto; color: var(--error);">${cloudSubStep?.jsErrors?.join("\\n") || "❌"}</pre>
-                                                    </div>
-                                                </div>
-                                            `
-                                : `<div style="padding: 16px; text-align: center; color: var(--success);">✅ No se detectaron errores de consola</div>`
-                            }
-                                    </div>
-                                </details>
-
-                                <!-- Network Requests Comparison -->
-                                <details class="network-request-item">
-                                    <summary class="substep-network-header">
-                                        <div style="substep-name">
-                                            └─ 🌐 Network Requests                                            
-                                        </div>
-                                            <div class="substep-durations">
-                                                <span class="duration-badge onpremise" title="On-Premise">${isFromOnpremise ? (subStep.networkLogs?.length || "❌") : (cloudSubStep?.networkLogs?.length || "❌")}</span>
-                                                <span class="duration-badge cloud" title="Cloud">${!isFromOnpremise ? (subStep.networkLogs?.length || "❌") : (cloudSubStep?.networkLogs?.length || "❌")}</span>
-                                            </div>
-                                    </summary>
-                                    <div class="substeps">
-                                        ${(() => {
-                                const networkComparisons = this.compareNetworkRequests(
-                                    subStep.networkLogs || [],
-                                    cloudSubStep?.networkLogs || []
-                                );
-
-                                if (networkComparisons.length === 0) {
-                                    return '<div style="padding: 16px; text-align: center; color: var(--success);">✅ No se realizaron peticiones de red</div>';
-                                }
-
-                                return networkComparisons.map(comparison => {
-                                    const onpremiseReq = comparison.onpremise;
-                                    const cloudReq = comparison.cloud;
-                                    const hasOnpremise = !!onpremiseReq;
-                                    const hasCloud = !!cloudReq;
-
-                                    return `
-                                                <div class="network-request-subItem">
-                                                    <div class="network-url" title="${comparison.url}">
-                                                        <span class="method-badge">${comparison.method}</span>
-                                                        ${comparison.urlName}
-                                                    </div>
-                                                    <div class="network-metrics">
-                                                        <div style="display: flex; flex-direction: column; gap: 4px; text-align: center;">
-                                                            <span style="font-size: 0.75rem; color: var(--text-muted);">Duración</span>
-                                                            <div style="display: flex; gap: 8px;">
-                                                                <span class="duration-badge onpremise" title="On-Premise">${hasOnpremise ? `${onpremiseReq.duration.toFixed(2) || 0}ms` : '❌'}</span>
-                                                                <span class="duration-badge cloud" title="Cloud">${hasCloud ? `${cloudReq.duration.toFixed(2) || 0}ms` : '❌'}</span>
-                                                            </div>
-                                                        </div>
-                                                        <div style="display: flex; flex-direction: column; gap: 4px; text-align: center;">
-                                                            <span style="font-size: 0.75rem; color: var(--text-muted);">Status</span>
-                                                            <div style="display: flex; gap: 8px;">
-                                                                <span class="status-badge status-${Math.floor((onpremiseReq?.status || 0) / 100) * 100}" title="On-Premise">
-                                                                    ${hasOnpremise ? (onpremiseReq.status || '—') : '❌'}
-                                                                </span>
-                                                                <span class="status-badge status-${Math.floor((cloudReq?.status || 0) / 100) * 100}" title="Cloud">
-                                                                    ${hasCloud ? (cloudReq.status || '—') : '❌'}
-                                                                </span>
-                                                            </div>
-                                                        </div>                                                                                                            
-                                                        ${hasOnpremise && hasCloud ? `
-                                                            <div class="performance-indicator ${(onpremiseReq.duration || 0) < (cloudReq.duration || 0) ? 'faster' : 'slower'}">
-                                                                ${(onpremiseReq.duration || 0) < (cloudReq.duration || 0) ? '⚡ On-Premise' : '⚡ Cloud'}
-                                                            </div>
-                                                        ` : ''}
-                                                    </div>
-                                                </div>
-                                                `;
-                                }).join('');
-                            })()}
-                                    </div>
-                                </details>
-                            </div>
-                            `;
-                    }).join('')}
-                    </div>
-                </details>
-                `;
-            }).join('')}
-        </div>
-
-        <div class="footer">
-            <p>Reporte generado automáticamente por el Sistema de Análisis de Performance</p>
-        </div>
-    </div>
-
-    ${(comparison.onpremise.totalDuration > 0 || comparison.cloud.totalDuration > 0) ? `
-    <script>
         const ctx = document.getElementById('comparisonChart')?.getContext('2d');
         
         if (ctx) {
             const stepNames = ${JSON.stringify([...new Set([
-                ...comparison.onpremise.steps.map((s: any) => s.name),
-                ...comparison.cloud.steps.map((s: any) => s.name)
-            ])])};
+            ...comparison.onpremise.steps.map((s: any) => s.name),
+            ...comparison.cloud.steps.map((s: any) => s.name)
+        ])])};
             
             const onpremiseData = stepNames.map(name => {
                 const step = ${JSON.stringify(comparison.onpremise.steps)}.find(s => s.name === name);
@@ -1124,9 +1185,6 @@ export class ReportGenerator {
                 observer.observe(el);
             });
         });
-    </script>
-    ` : ''}
-</body>
-</html>`;
+`
     }
 }

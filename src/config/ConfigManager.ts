@@ -1,80 +1,4 @@
-export interface AppConfig {
-  name: string;
-  baseUrl: string;
-  technology: string;
-  accountType: string;
-  username: string;
-  password: string;
-}
-
-export interface PerformanceThresholds {
-  // Core Web Vitals
-  lcp: number;
-  fid: number;
-  inp: number;
-  cls: number;
-  
-  // Performance Metrics
-  ttfb: number;
-  fcp: number;
-  tti: number;
-  dnsResolution: number;
-  sslHandshake: number;
-  jsLoadTime: number;
-  cssLoadTime: number;
-  imgLoadTime: number;
-  totalLoadTime: number;
-  
-  // Custom Application Metrics
-  loginTime: number;
-  dashboardLoadTime: number;
-  formProcessingTime: number;
-  moduleNavigationTime: number;
-}
-
-export interface TestConfig {
-  timeout: number;
-  defaultTags: string;
-  category: string;
-  flowsToRun: string;
-  environment: string;
-  networkConditions: string;
-  parallelInstances: number;
-  iterations: number;
-  cooldownBetweenRuns: number;
-  browserRestartFrequency: number;
-  clearCacheBetweenRuns: boolean;
-  clearCookiesBetweenRuns: boolean;
-  continueOnFailure: boolean;
-  maxConsecutiveFailures: number;
-  regressionThresholdPercentage: number;
-}
-
-export interface NetworkConfig {
-  downloadThroughput: number;
-  uploadThroughput: number;
-  latency: number;
-  packetLoss: number;
-}
-
-export interface MonitoringConfig {
-  captureWebVitals: boolean;
-  captureNetworkMetrics: boolean;
-  captureCustomMetrics: boolean;
-  monitorMemoryUsage: boolean;
-  monitorCpuUsage: boolean;
-  captureConsoleLogs: boolean;
-  captureNetworkLogs: boolean;
-  memoryThresholdMb: number;
-  cpuThresholdPercentage: number;
-}
-
-export interface ReportingConfig {
-  outputPath: string;
-  reportFormat: string[];
-  generateScreenshots: boolean;
-  generateVideoRecording: boolean;
-}
+import { AppConfig, TestConfig, PerformanceThresholds, NetworkConfig, MonitoringConfig, ReportingConfig } from "../types/config.types";
 
 export class ConfigManager {
   private static instance: ConfigManager;
@@ -118,20 +42,18 @@ export class ConfigManager {
   private loadTestConfig(): TestConfig {
     return {
       timeout: parseInt(this.getEnv('LOAD_TIMEOUT', '10000')),
-      defaultTags: this.getEnv('DEFAULT_TAGS', 'xas'),
-      category: this.getEnv('CATEGORY', '3'),
-      flowsToRun: this.getEnv('FLOWS_TO_RUN', '10'),
       environment: this.getEnv('ENVIRONMENT', 'pre'),
-      networkConditions: this.getEnv('NETWORK_CONDITIONS', '4g'),
+      networkConditions: this.getEnv('NETWORK_CONDITIONS', 'none'),
       parallelInstances: parseInt(this.getEnv('PARALLEL_INSTANCES', '1')),
       iterations: parseInt(this.getEnv('ITERATIONS', '3')),
       cooldownBetweenRuns: parseInt(this.getEnv('COOLDOWN_BETWEEN_RUNS', '5000')),
       browserRestartFrequency: parseInt(this.getEnv('BROWSER_RESTART_FREQUENCY', '10')),
-      clearCacheBetweenRuns: this.getBooleanEnv('CLEAR_CACHE_BETWEEN_RUNS', true),
+      clearCacheBetweenRuns: this.getBooleanEnv('CLEAR_CACHE_BETWEEN_RUNS', false),
       clearCookiesBetweenRuns: this.getBooleanEnv('CLEAR_COOKIES_BETWEEN_RUNS', true),
       continueOnFailure: this.getBooleanEnv('CONTINUE_ON_FAILURE', true),
       maxConsecutiveFailures: parseInt(this.getEnv('MAX_CONSECUTIVE_FAILURES', '3')),
       regressionThresholdPercentage: parseInt(this.getEnv('REGRESSION_THRESHOLD_PERCENTAGE', '10')),
+      storePath: this.getEnv('STORE_PATH', './store'),
     };
   }
 
