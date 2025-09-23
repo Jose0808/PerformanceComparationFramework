@@ -7,8 +7,6 @@ import { TestTimer } from '../utils/timer.utils';
 
 export class Vista360IndividualPage extends BasePage {
 
-    // Generic selectors that should work for most login forms
-
     private readonly currentFrame = "div:nth-child(4) > iframe";
     private readonly searchCustomerText = "Búsqueda de clientes";
     // private readonly serviceNo: FrameOptions = { frame: this.currentFrame, selector: "#serviceNO" };

@@ -10,7 +10,7 @@ import CambioDeNumero from '../data-driven/CambioDeNumero.json';
 import { BaseTestHelper } from './base-test.helper';
 import { TestTimer } from '../utils/timer.utils';
 import { ExecutionCollector } from '../collectors/ExecutionCollector';
-import { ReportGenerator } from '../utils/report.utils';
+import { ReportGenerator } from '../reporters/report-generator';
 import { ExecutionRun } from '../types/executionTypes';
 import { HeaderPage } from '../pages/header.page';
 import { SessionCache } from '../utils/sessionCache.utils'
@@ -79,17 +79,18 @@ test.describe('Cambio de Numero Performance Tests', () => {
         test(`Latencia Ejecución ${iteration}`, async ({ browser, browserName }) => {
           testHelper.logTestStart(app.name, iteration, flowName);
 
-          const context = await SessionCache.loadContext(browser, app);
-          const page = await context.newPage();
+          const { context, page } = await SessionCache.loadContext(browser, app);
           testHelper.setupPages(page);
 
           const timer = new TestTimer(page);
           const testData = CambioDeNumero as ICambioDeNumero;
+
           let metrics: any;
           let testError: string | undefined;
 
           try {
             await testHelper.executeFlow(app, timer, testData);
+
             metrics = await testHelper.pages.dashboard.collectPerformanceMetrics();
 
             testHelper.logResults(app.name, iteration, metrics, flowName);
@@ -123,52 +124,16 @@ test.describe('Cambio de Numero Performance Tests', () => {
             );
             await testHelper.handleCooldownAndRestart(iteration, page);
             await context.close();
-            collector.endSession();
           }
         });
       }
     });
   }
 
-  // test.afterAll(async () => {
-  //   console.log(`After:`);
-  //   const session = collector.getSession(sessionId);
-  //   if (!session) return;
-
-  //   console.log(`📊 Sesión completada:`);
-  //   console.log(`   - Total runs: ${session.completedRuns}`);
-  //   console.log(`   - Apps probadas: ${[...new Set(session.runs.map(r => r.appName))].join(', ')}`);
-  //   console.log(`   - Duración: ${Math.round((new Date().getTime() - session.startTime.getTime()) / 1000)}s`);
-
-  //   // const groupedByApp = new Map<string, ExecutionRun[]>();
-  //   // session.runs.forEach(run => {
-  //   //   if (run.flowName !== flowName) return;
-  //   //   if (!groupedByApp.has(run.appName)) {
-  //   //     groupedByApp.set(run.appName, []);
-  //   //   }
-  //   //   groupedByApp.get(run.appName)!.push(run);
-  //   // });
-
-  //   // let a = groupedByApp.get('OnPremise');
-  //   // let b = groupedByApp.get('Cloud');
-  //   // if (!a || !b) return;
-
-  //   // let executiona = a[0].execution;
-  //   // let executionb = b[0].execution;
-  //   // const comparison = ReportGenerator.generateComparison(executiona, executionb);
-
-  //   // const fechaActual = new Date();
-  //   // const fechaFormateada = `${String(fechaActual.getDate()).padStart(2, '0')}-${String(
-  //   //   fechaActual.getMonth() + 1
-  //   // ).padStart(2, '0')}-${fechaActual.getFullYear()}-${String(
-  //   //   fechaActual.getHours()
-  //   // ).padStart(2, '0')}-${String(fechaActual.getMinutes()).padStart(2, '0')}`;
-
-  //   // const fileName = `./reports/${comparison.testName.replace(/\s+/g, '_')}/Reporte_${fechaFormateada}`;
-  //   // await ReportGenerator.generateHTMLReport(comparison, fileName);
-
-  //   collector.endSession();
-  //   console.log(`📊 Reporte generado y sesión finalizada`);
-  // });
+  test.afterAll(async () => {
+    // const session = collector.getSession(sessionId);
+    // if (!session) return;
+    collector.endSession();
+  });
 
 });

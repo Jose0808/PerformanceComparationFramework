@@ -2,6 +2,7 @@ import { Page } from '@playwright/test';
 import { ConfigManager } from '../config/ConfigManager';
 
 export interface NetworkLog {
+  order: number;
   url: string;
   urlName: string;
   method: string;
@@ -64,6 +65,8 @@ export class MetricsCollector {
   private consoleLogs: string[] = [];
   private networkLogs: NetworkLog[] = [];
   private jsErrors: string[] = [];
+  private requestCounter = 0;
+
 
 
   constructor(page: Page) {
@@ -95,8 +98,10 @@ export class MetricsCollector {
       this.page.on('request', (request) => {
         const now = performance.now();
         const key = `${request.url()}_${now}`;
+        this.requestCounter++;
 
         const log: NetworkLog = {
+          order: this.requestCounter,
           url: request.url(),
           urlName: this.normalizeUrlName(request.url()),
           method: request.method(),
@@ -120,8 +125,6 @@ export class MetricsCollector {
         } catch (e) {
           // falló la descarga
         }
-
-        const endTime = performance.now();
 
         log.status = response.status();
         // log.duration = endTime - log.requestTimestamp;

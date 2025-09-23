@@ -117,7 +117,7 @@ if (REPORT_FORMAT.includes('junit')) {
 }
 
 // Add custom performance reporter
-reporters.push(['./src/reporters/PerformanceReporter.ts']);
+reporters.push(['./src/reporters/performance-reporter.ts']);
 
 export default defineConfig({
   testDir: resolvePlaywrightResource('src/tests'),

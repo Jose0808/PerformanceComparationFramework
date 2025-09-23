@@ -83,9 +83,9 @@ function getProjectPaths(): ProjectPaths {
 }
 
 function runNodeScript(scriptPath: string, args: string[] = []) {
-  const nodeRuntime = process.execPath; // Node empaquetado en Electron
+  const nodeRuntime = process.execPath; 
   return spawn(nodeRuntime, [scriptPath, ...args], {
-    cwd: process.resourcesPath, // ruta dentro del .exe donde pusiste tus archivos
+    cwd: process.resourcesPath,
     stdio: "inherit",
     shell: false
   });

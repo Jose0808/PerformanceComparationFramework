@@ -136,7 +136,7 @@ export class ExecutionCollector {
     return grouped;
   }
 
-  // Limpiar datos antiguos (mantener solo últimas N sesiones)
+  // Limpiar datos antiguos
   cleanup(keepLastNSessions: number = 10): void {
     const sessions = Array.from(this.sessions.entries())
       .sort(([, a], [, b]) => b.startTime.getTime() - a.startTime.getTime());

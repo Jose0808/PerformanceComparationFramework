@@ -1,4 +1,3 @@
-// electron/main.js - ARCHIVO LOADER
 require('ts-node').register({
   transpileOnly: true,
   compilerOptions: {

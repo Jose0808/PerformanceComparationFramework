@@ -169,7 +169,7 @@ export class BasicInfo extends BasePage {
 
     async handleServerError(frame: FrameLocator) {
         const errorDiv = frame.locator('#win0');
-        if (await errorDiv.isVisible({ timeout: 5000 })) {
+        if (await errorDiv.isVisible({ timeout: 9000 })) {
             console.log('❌ Error detectado en la aplicación');
             const closeBtn = errorDiv.getByRole('button', { name: 'Cerrar' });
             const details = await errorDiv.innerText();

@@ -204,7 +204,6 @@ services:
 ### Custom Metrics
 
 ```typescript
-// In your page objects
 await this.metricsCollector.recordCustomMetric('custom_action_time', duration);
 ```
 
@@ -219,9 +218,7 @@ await this.metricsCollector.recordCustomMetric('custom_action_time', duration);
 Extend `PerformanceReporter.ts` to add new report formats:
 
 ```typescript
-// Add new report generator
 private async generateCustomReport(data: any): Promise<void> {
-  // Custom report implementation
 }
 ```
 

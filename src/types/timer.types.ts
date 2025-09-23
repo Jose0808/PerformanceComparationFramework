@@ -26,20 +26,3 @@ export interface TestExecution {
     steps: Step[];
     timestamp: Date;
 }
-
-export interface ComparisonReport {
-    testName: string;
-    onpremise: TestExecution;
-    cloud: TestExecution;
-    comparison: {
-        totalDifference: number;
-        fasterEnvironment: string;
-        stepComparisons: Array<{
-            stepName: string;
-            onpremiseDuration: number;
-            cloudDuration: number;
-            difference: number;
-            fasterEnvironment: string;
-        }>;
-    };
-}

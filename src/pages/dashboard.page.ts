@@ -6,7 +6,6 @@ import { TestTimer } from '../utils/timer.utils';
 
 export class DashboardPage extends BasePage {
 
-  // Generic selectors that should work for most login forms
   private readonly successIndicators = '#sitemap';
   private readonly siteMap = '#sitemap';
 

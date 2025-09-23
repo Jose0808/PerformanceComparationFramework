@@ -6,7 +6,6 @@ import { AppConfig } from '../types/config.types';
 import { TestTimer } from '../utils/timer.utils';
 
 export class HeaderPage extends BasePage {
-  // Generic selectors that should work for most login forms
   private readonly singOutDropList = '.ao-droplist';
   private readonly disconnectButton = '#bes_sm_portal_exit_pic';
 

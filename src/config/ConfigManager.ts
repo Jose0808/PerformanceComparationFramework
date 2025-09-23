@@ -57,8 +57,6 @@ export class ConfigManager {
     };
   }
 
-
-  ///despues
   private loadThresholds(): PerformanceThresholds {
     return {
       // Core Web Vitals
@@ -141,4 +139,6 @@ export class ConfigManager {
   public getAllApps(): AppConfig[] {
     return [this.app1, this.app2];
   }
+
+
 }

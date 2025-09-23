@@ -6,7 +6,7 @@ import { AppConfig } from '../types/config.types';
 import { TestTimer } from '../utils/timer.utils';
 
 export class LoginPage extends BasePage {
-  // Generic selectors that should work for most login forms
+
   private readonly accountTypeInput = '#accountTypeSelect';
   private readonly usernameInput = '#ipt_name';
   private readonly passwordInput = '#ipt_pwd';
@@ -20,16 +20,13 @@ export class LoginPage extends BasePage {
    * Complete login flow with performance tracking
    */
   async login(appConfig: AppConfig, timer: TestTimer): Promise<void> {
+    if (!await this.isLoggedIn()) {
 
-    // PASO 1: LOGIN
-    console.log(`⏳ Iniciando flujo inicio de sesión para ${appConfig.name}`);
-    timer.startStep(appConfig.name, 'Inicio de sesión');
+      // PASO 1: LOGIN
+      console.log(`⏳ Iniciando flujo inicio de sesión para ${appConfig.name}`);
+      timer.startStep(appConfig.name, 'Inicio de sesión');
 
-    try {
-
-      await this.goto(appConfig.baseUrl, timer);
-
-      if (!await this.isLoggedIn()) {
+      try {
         const loginurl = "login-colombia.html"
         const loguedurl = "operator_ctz.html"
 
@@ -52,11 +49,11 @@ export class LoginPage extends BasePage {
           this.detectError();
         }
         timer.endSubStep();
+        timer.endStep();
+        console.log(`✅ Inicio de sesión completado exitosamente para ${appConfig.name}`);
+      } catch (error) {
+        throw new Error(`❌ Inicio de sesión fallido para ${appConfig.name} - Error: ${error}`);
       }
-      timer.endStep();
-      console.log(`✅ Inicio de sesión completado exitosamente para ${appConfig.name}`);
-    } catch (error) {
-      throw new Error(`❌ Inicio de sesión fallido para ${appConfig.name} - Error: ${error}`);
     }
   }
 

@@ -7,7 +7,6 @@ import { TestTimer } from '../utils/timer.utils';
 
 
 export class ChangeNumber extends BasePage {
-    // Generic selectors that should work for most login forms
 
     private readonly currentFrame = "div:nth-child(5) > iframe";
 
