@@ -36,8 +36,8 @@
                 <span>🚀</span> Ejecutar Pruebas
             </button>
 
-            <button class="nav-button secondary" disabled onclick="showSection('scheduler')">
-                <span>📅</span> Planificador (Desarrollo)
+            <button class="nav-button secondary" onclick="showSection('scheduler')">
+                <span>📅</span> Planificador
             </button>
 
             <button class="nav-button tertiary" onclick="showSection('reports')">
@@ -245,125 +245,6 @@
                 </div>
             </div>
 
-
-            <!-- ===== PLANIFICADOR ===== -->
-            <div id="scheduler-section" class="content-section hidden">
-                <div class="content-card scheduler-container">
-                    <!-- Status Panel -->
-                    <div class="status-panel">
-                        <h3>Estado del Scheduler</h3>
-                        <div id="scheduler-status">
-                            <div class="status-item">
-                                <span class="status-label">Estado:</span>
-                                <span id="status-text" class="status-inactive">Inactivo</span>
-                            </div>
-                            <div class="status-item">
-                                <span class="status-label">Próxima ejecución:</span>
-                                <span id="next-execution">-</span>
-                            </div>
-                            <div class="status-item">
-                                <span class="status-label">Última ejecución:</span>
-                                <span id="last-execution">-</span>
-                            </div>
-                        </div>
-
-                        <div class="status-controls">
-                            <button id="pause-scheduler" class="btn btn-danger">Pausar Todo</button>
-                            <button id="resume-scheduler" class="btn btn-success">Reanudar Todo</button>
-                            <button id="refresh-status" class="btn btn-secondary">Actualizar</button>
-                        </div>
-                    </div>
-
-                    <!-- Profile Management -->
-                    <div class="profile-panel">
-                        <h3>Perfiles de Ejecución</h3>
-                        <button id="create-profile-btn" class="btn btn-primary">Crear Nuevo Perfil</button>
-
-                        <div id="profiles-list">
-                            <!-- Se llena dinámicamente -->
-                        </div>
-                    </div>
-
-                    <!-- Execution History -->
-                    <div class="history-panel">
-                        <h3>Historial de Ejecuciones</h3>
-                        <div class="history-controls">
-                            <select id="history-days">
-                                <option value="1">Último día</option>
-                                <option value="7" selected>Última semana</option>
-                                <option value="30">Último mes</option>
-                            </select>
-                            <button id="refresh-history" class="btn btn-secondary">Actualizar</button>
-                        </div>
-
-                        <div id="execution-history">
-                            <!-- Se llena dinámicamente -->
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Modal para crear/editar perfil -->
-                <div id="profile-modal" class="modal" style="display: none;">
-                    <div class="modal-content">
-                        <span class="close">&times;</span>
-                        <h3>Configurar Perfil de Scheduler</h3>
-
-                        <form id="profile-form" type="submit">
-                            <div class="form-group">
-                                <label>Nombre del perfil:</label>
-                                <input type="text" id="profile-name" required>
-                            </div>
-
-                            <div class="form-group">
-                                <label>Descripción:</label>
-                                <input type="text" id="profile-description">
-                            </div>
-
-                            <div class="form-group">
-                                <label>Ejecutar cada (minutos):</label>
-                                <input type="number" id="interval-minutes" min="5" max="1440" value="15">
-                            </div>
-
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label>Hora inicio:</label>
-                                    <input type="time" id="start-time" value="08:00">
-                                </div>
-                                <div class="form-group">
-                                    <label>Hora fin:</label>
-                                    <input type="time" id="end-time" value="18:00">
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label>Días de la semana:</label>
-                                <div class="checkbox-group">
-                                    <label><input name="days" type="checkbox" value="1" checked> Lunes</label>
-                                    <label><input name="days" type="checkbox" value="2" checked> Martes</label>
-                                    <label><input name="days" type="checkbox" value="3" checked> Miércoles</label>
-                                    <label><input name="days" type="checkbox" value="4" checked> Jueves</label>
-                                    <label><input name="days" type="checkbox" value="5" checked> Viernes</label>
-                                    <label><input name="days" type="checkbox" value="6"> Sábado</label>
-                                    <label><input name="days" type="checkbox" value="0"> Domingo</label>
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label>Tests a ejecutar:</label>
-                                <div class="checkbox-group" id="testsContainer">
-                                </div>
-                            </div>
-
-                            <div class="form-actions">
-                                <button type="button" class="btn" id="cancel-profile">Cancelar</button>
-                                <button type="button" class="btn btn-primary" id="submit-profile"
-                                    onclick="saveProfile()">Guardar Perfil</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-
             <!-- ===== REPORTES ===== -->
             <div id="reports-section" class="content-section hidden">
                 <div class="content-card">
@@ -391,6 +272,113 @@
                             <li><strong>Trace Files:</strong> Archivos de traza para debugging profundo</li>
                             <li><strong>JSON Reports:</strong> Datos estructurados para análisis</li>
                         </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== PLANIFICADOR DE PRUEBAS ===== -->
+            <!-- ===== PLANIFICADOR DE PRUEBAS ===== -->
+            <div id="scheduler-section" class="content-section hidden">
+                <div class="content-card">
+                    <h2>📅 Planificador de Pruebas</h2>
+                    <p>Configure y monitoree pruebas automáticas programadas</p>
+
+                    <!-- Estado del servicio -->
+                    <div id="scheduler-status" class="system-check" style="margin-bottom: 20px;">
+                        <span>Estado del Servicio</span>
+                        <span id="service-status"><span
+                                class="status-indicator status-loading"></span>Conectando...</span>
+                    </div>
+
+                    <div class="action-buttons">
+                        <button class="btn btn-primary" onclick="schedulerInit()">🔄 Conectar Servicio</button>
+                        <button class="btn btn-success" onclick="showCreateScheduleForm()">➕ Nueva Programación</button>
+                        <button class="btn btn-secondary" onclick="refreshSchedules()">🔄 Actualizar</button>
+                    </div>
+
+                    <!-- Formulario para crear/editar schedule -->
+                    <div id="schedule-form" class="hidden"
+                        style="margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background: #f9f9f9;">
+                        <h3 id="form-title">📝 Nueva Programación</h3>
+
+                        <div class="two-column" style="gap: 20px;">
+                            <div>
+                                <label for="schedule-name">Nombre:</label>
+                                <input type="text" id="schedule-name" class="env-input"
+                                    placeholder="Ej: Tests de Latencia Diarios">
+
+                                <label for="test-pattern">Patrón de Tests (opcional):</label>
+                                <input type="text" id="test-pattern" class="env-input"
+                                    placeholder="Ej: src/tests/latency*.spec.ts">
+
+                                <label for="schedule-enabled">
+                                    <input type="checkbox" id="schedule-enabled" checked> Habilitar inmediatamente
+                                </label>
+                            </div>
+
+                            <div>
+                                <label for="cron-expression">Programación (Cron):</label>
+                                <select id="cron-preset" onchange="setCronFromPreset()">
+                                    <option value="">Seleccionar patrón común...</option>
+                                </select>
+                                <input type="text" id="cron-expression" class="env-input" placeholder="0 */6 * * *">
+                                <div style="font-size: 12px; color: #666; margin-top: 5px;">
+                                    Formato: minuto hora día mes día-semana
+                                </div>
+
+                                <label for="timeout">Timeout (minutos):</label>
+                                <input type="number" id="timeout" class="env-input" value="30" min="5" max="180">
+
+                                <label for="browsers">Navegadores:</label>
+                                <div style="display: flex; gap: 10px; margin-top: 5px;">
+                                    <label><input type="checkbox" id="browser-chromium" value="chromium" checked>
+                                        Chromium</label>
+                                    <label><input type="checkbox" id="browser-firefox" value="firefox"> Firefox</label>
+                                    <label><input type="checkbox" id="browser-webkit" value="webkit"> WebKit</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="action-buttons" style="margin-top: 15px;">
+                            <button class="btn btn-success" onclick="saveSchedule()" id="save-schedule-btn">💾
+                                Guardar</button>
+                            <button class="btn btn-secondary" onclick="cancelScheduleForm()">❌ Cancelar</button>
+                        </div>
+                    </div>
+
+                    <!-- Lista de schedules -->
+                    <div id="schedules-container">
+                        <h3>📋 Programaciones Actuales</h3>
+                        <div id="schedules-list" class="schedules-list">
+                            <div style="padding: 20px; text-align: center; color: #666;">
+                                Conectando al servicio...
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Monitor de ejecución -->
+                    <div id="schedule-monitor" class="hidden" style="margin-top: 20px;">
+                        <h3>🖥️ Monitor de Ejecución</h3>
+                        <div class="console-output" id="schedule-console" style="height: 200px;">
+                            <div>Monitor de pruebas programadas...</div>
+                        </div>
+                    </div>
+
+                    <!-- Información del servicio -->
+                    <div class="success-message" style="margin-top: 20px;">
+                        <h4>ℹ️ Información del Servicio:</h4>
+                        <ul style="padding-left: 20px; line-height: 1.6; margin-top: 10px;">
+                            <li><strong>Independiente:</strong> Las pruebas continúan ejecutándose aunque cierre
+                                Electron</li>
+                            <li><strong>Automático:</strong> El servicio se inicia automáticamente si no está corriendo
+                            </li>
+                            <li><strong>Persistente:</strong> Las configuraciones se guardan en archivos locales</li>
+                            <li><strong>Monitoreable:</strong> Recibe notificaciones en tiempo real de las ejecuciones
+                            </li>
+                        </ul>
+                        <div id="service-info" style="margin-top: 15px; font-size: 12px; color: #666;">
+                            Estado del servicio: Desconectado
+                        </div>
                     </div>
                 </div>
             </div>

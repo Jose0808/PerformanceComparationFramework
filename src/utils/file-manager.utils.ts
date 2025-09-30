@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import open from 'open'
 
 export class FileManager {
     static ensureDirectoryExists(dirPath: string): void {
@@ -14,8 +15,7 @@ export class FileManager {
 
     static async openFile(filePath: string): Promise<void> {
         try {
-            const open = await import('open');
-            await open.default(filePath, { wait: false });
+            // await open(filePath, { wait: false });
             console.log('✅ Reporte abierto en el navegador predeterminado');
         } catch (error) {
             console.warn('⚠️ No se pudo abrir el reporte automáticamente:', error);

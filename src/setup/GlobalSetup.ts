@@ -123,11 +123,11 @@ async function validateUrlsAccessibility(config: ConfigManager): Promise<void> {
       if (response.ok) {
         console.log(`  ✅ ${name} (${url}): Accessible`);
       } else {
-        console.warn(`  ⚠️  ${name} (${url}): HTTP ${response.status}`);
+        console.info(`  ⚠️  ${name} (${url}): HTTP ${response.status}`);
       }
     } catch (error) {
-      console.warn(`  ⚠️  ${name} (${url}): ${error}`);
-      console.warn('    Note: URL validation failed, but tests will continue');
+      console.info(`  ⚠️  ${name} (${url}): ${error}`);
+      console.info('    Note: URL validation failed, but tests will continue');
     }
   }
 }

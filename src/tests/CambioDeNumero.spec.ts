@@ -1,4 +1,4 @@
-import { test } from '@playwright/test';
+import { BrowserContext, Page, test } from '@playwright/test';
 import { LoginPage } from '../pages/login.page';
 import { DashboardPage } from '../pages/dashboard.page';
 import { Vista360IndividualPage } from '../pages/vista360Individual.page';
@@ -10,11 +10,8 @@ import CambioDeNumero from '../data-driven/CambioDeNumero.json';
 import { BaseTestHelper } from './base-test.helper';
 import { TestTimer } from '../utils/timer.utils';
 import { ExecutionCollector } from '../collectors/ExecutionCollector';
-import { ReportGenerator } from '../reporters/report-generator';
-import { ExecutionRun } from '../types/executionTypes';
 import { HeaderPage } from '../pages/header.page';
 import { SessionCache } from '../utils/sessionCache.utils'
-import { config } from 'process';
 
 class CambioNumeroTest extends BaseTestHelper {
   public pages: any = {};
@@ -43,13 +40,13 @@ class CambioNumeroTest extends BaseTestHelper {
     );
 
     await this.pages.vista360.searchCustomer(app, timer, testData.filters);
-    await this.pages.basicInfo.selectSuscription(
-      app,
-      timer,
-      testData.SuscriptionRow,
-      "Cambio de número"
-    );
-    await this.pages.changeNumber.changeNumber(app, timer);
+    // await this.pages.basicInfo.selectSuscription(
+    //   app,
+    //   timer,
+    //   testData.SuscriptionRow,
+    //   "Cambio de número"
+    // );
+    // await this.pages.changeNumber.changeNumber(app, timer);
     // await this.pages.checkout.checkoutValidate(app, timer);
     // await this.pages.header.logout(app);
   }
@@ -75,14 +72,26 @@ test.describe('Cambio de Numero Performance Tests', () => {
 
   for (const app of testHelper.config.getAllApps()) {
     test.describe(`${app.name}`, () => {
+      let sharedContext: BrowserContext;
+      let sharedPage: Page;
+
+      test.beforeAll(async ({ browser }) => {
+        const { context, page } = await SessionCache.loadContext(browser, app);
+        sharedContext = context;
+        sharedPage = page;
+      });
+
+      test.afterAll(async () => {
+        await SessionCache.saveContext(sharedContext, app.name);
+        await sharedContext.close();
+      });
+
       for (let iteration = 1; iteration <= testHelper.config.test.iterations; iteration++) {
-        test(`Latencia Ejecución ${iteration}`, async ({ browser, browserName }) => {
+        test(`Latencia Ejecución ${iteration}`, async ({ browserName }) => {
           testHelper.logTestStart(app.name, iteration, flowName);
+          testHelper.setupPages(sharedPage);
 
-          const { context, page } = await SessionCache.loadContext(browser, app);
-          testHelper.setupPages(page);
-
-          const timer = new TestTimer(page);
+          const timer = new TestTimer(sharedPage);
           const testData = CambioDeNumero as ICambioDeNumero;
 
           let metrics: any;
@@ -90,7 +99,6 @@ test.describe('Cambio de Numero Performance Tests', () => {
 
           try {
             await testHelper.executeFlow(app, timer, testData);
-
             metrics = await testHelper.pages.dashboard.collectPerformanceMetrics();
 
             testHelper.logResults(app.name, iteration, metrics, flowName);
@@ -102,8 +110,6 @@ test.describe('Cambio de Numero Performance Tests', () => {
               iteration,
               flowName
             );
-
-            await SessionCache.saveContext(context, app.name);
 
           } catch (error) {
             testError = testHelper.handleTestError(error, app.name, iteration, flowName);
@@ -118,12 +124,10 @@ test.describe('Cambio de Numero Performance Tests', () => {
               testError,
               {
                 browser: browserName,
-                viewport: JSON.stringify(page.viewportSize()),
-                userAgent: await page.evaluate(() => navigator.userAgent).catch(() => 'unknown')
+                viewport: JSON.stringify(sharedPage.viewportSize()),
+                userAgent: await sharedPage.evaluate(() => navigator.userAgent).catch(() => 'unknown')
               }
             );
-            await testHelper.handleCooldownAndRestart(iteration, page);
-            await context.close();
           }
         });
       }

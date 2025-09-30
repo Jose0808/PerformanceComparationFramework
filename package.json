@@ -18,7 +18,9 @@
     "pack": "npm run prepare-build && electron-builder --dir",
     "build:electron": "npm run install:browsers && npm run prepare-build && electron-builder --win",
     "postinstall": "electron-builder install-app-deps",
-    "scheduler:start": "node dist/scheduler/SchedulerExecutor.js"
+    "scheduler": "node dist/SchedulerService.js",
+    "scheduler:start": "npm run build && node dist/SchedulerService.js",
+    "scheduler:stop": "pkill -f SchedulerService.js"
   },
   "keywords": [
     "playwright",
@@ -30,13 +32,19 @@
   "license": "ISC",
   "dependencies": {
     "@playwright/test": "^1.54.2",
+    "@types/node-cron": "^3.0.11",
+    "cron-parser": "^5.4.0",
     "dotenv": "^17.2.1",
+    "node-cron": "^4.2.1",
     "open": "^10.2.0",
     "simple-statistics": "^7.8.8",
-    "util": "^0.12.5"
+    "util": "^0.12.5",
+    "winston": "^3.17.0",
+    "ws": "^8.18.3"
   },
   "devDependencies": {
     "@types/node": "^24.2.1",
+    "@types/ws": "^8.18.1",
     "electron": "^27.0.0",
     "electron-builder": "^24.6.4",
     "ts-node": "^10.9.2",
@@ -65,11 +73,19 @@
         "to": "node_modules"
       },
       {
-        "from": "electron/renderer",
+        "from": "dist/electron/renderer",
         "to": "renderer"
       },
       {
-        "from": "src",
+        "from": "dist/electron/types",
+        "to": "electron/types"
+      },
+      {
+        "from": "dist/electron/commands.js",
+        "to": "electron/commands.js"
+      },
+      {
+        "from": "dist/src",
         "to": "src"
       },
       {
@@ -77,8 +93,8 @@
         "to": ".env"
       },
       {
-        "from": "playwright.config.ts",
-        "to": "playwright.config.ts"
+        "from": "dist/playwright.config.js",
+        "to": "playwright.config.js"
       }
     ],
     "nsis": {

@@ -2,16 +2,6 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    --scheduler-primary: #007bff;
-    --scheduler-success: #28a745;
-    --scheduler-warning: #ffc107;
-    --scheduler-danger: #dc3545;
-    --scheduler-secondary: #6c757d;
-    --scheduler-bg: #f8f9fa;
-    --scheduler-card-bg: #ffffff;
-    --scheduler-border: #dee2e6;
-    --scheduler-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    --scheduler-radius: 8px;
 }
 
 body {
@@ -160,7 +150,7 @@ body {
 }
 
 .hidden {
-    display: none;
+    display: none !important;
 }
 
 .action-buttons {
@@ -377,165 +367,234 @@ input {
     font-size: 13px;
 }
 
-/* Scheduler Styles */
-.scheduler-container {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: auto 1fr;
-    gap: 20px;
-    height: 100%;
-}
+/* ======================== PLANIFICADOR STYLES ======================== */
 
-.status-panel,
-.profile-panel,
-.history-panel {
-    background: var(--card-bg);
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.history-panel {
-    grid-column: 1 / -1;
-}
-
-.status-item {
-    display: flex;
-    justify-content: space-between;
-    margin: 10px 0;
-    padding: 8px 0;
-    border-bottom: 1px solid #eee;
-}
-
-.status-label {
-    font-weight: 500;
-}
-
-.status-active {
-    color: #28a745;
-}
-
-.status-inactive {
-    color: #dc3545;
-}
-
-.status-controls {
-    display: flex;
-    gap: 10px;
-    margin-top: 15px;
-}
-
-.profile-item {
+.schedules-list {
+    max-height: 500px;
+    overflow-y: auto;
     border: 1px solid #ddd;
-    border-radius: 6px;
+    border-radius: 8px;
+    background: #f9f9f9;
+    padding: 10px;
+}
+
+.schedule-item {
+    transition: all 0.2s ease;
+}
+
+.schedule-item:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transform: translateY(-1px);
+}
+
+.btn-sm {
+    padding: 4px 8px;
+    font-size: 11px;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-sm:hover {
+    opacity: 0.8;
+    transform: translateY(-1px);
+}
+
+.btn-warning {
+    background: #ff9800;
+    color: white;
+}
+
+.btn-warning:hover {
+    background: #f57c00;
+}
+
+/* Formulario de schedule */
+#schedule-form {
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+#schedule-form label {
+    display: block;
+    margin: 15px 0 5px 0;
+    font-weight: bold;
+    color: #333;
+}
+
+#schedule-form input[type="text"],
+#schedule-form input[type="number"],
+#schedule-form select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+#schedule-form input[type="checkbox"] {
+    margin-right: 8px;
+}
+
+/* Monitor de ejecución */
+#schedule-monitor {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #f9f9f9;
     padding: 15px;
-    margin: 10px 0;
+}
+
+#schedule-console {
+    background: #000;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    padding: 15px;
+    border-radius: 4px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+/* Estado del servicio */
+.system-check {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    padding: 10px 15px;
+    background: #f0f0f0;
+    border-radius: 6px;
+    margin: 5px 0;
 }
 
-.profile-info h4 {
-    margin: 0 0 5px 0;
+.status-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 8px;
 }
 
-.profile-info p {
-    margin: 0;
-    color: #666;
-    font-size: 0.9em;
+.status-ok {
+    background-color: #4caf50;
+    animation: pulse 2s infinite;
 }
 
-.profile-actions {
+.status-error {
+    background-color: #f44336;
+}
+
+.status-loading {
+    background-color: #ff9800;
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+/* Responsive para la columna de botones */
+@media (max-width: 768px) {
+    .schedule-item > div {
+        flex-direction: column;
+    }
+    
+    .schedule-item > div > div:last-child {
+        margin-left: 0;
+        margin-top: 15px;
+        display: flex;
+        gap: 5px;
+        flex-wrap: wrap;
+    }
+}
+
+/* Mejoras visuales para el formulario */
+.two-column {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+@media (max-width: 768px) {
+    .two-column {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Estilos para mensajes de información */
+.success-message {
+    background-color: #d4edda;
+    border: 1px solid #c3e6cb;
+    color: #155724;
+    padding: 15px;
+    border-radius: 8px;
+    margin: 15px 0;
+}
+
+.warning-box {
+    background-color: #fff3cd;
+    border: 1px solid #ffeaa7;
+    color: #856404;
+    padding: 15px;
+    border-radius: 8px;
+    margin: 15px 0;
+}
+
+.error-message {
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    color: #721c24;
+    padding: 15px;
+    border-radius: 8px;
+    margin: 15px 0;
+}
+
+/* Animaciones para botones */
+.btn {
+    transition: all 0.2s ease;
+}
+
+.btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.btn:active {
+    transform: translateY(0);
+}
+
+/* Indicadores de estado en schedules */
+.schedule-item h4 {
     display: flex;
+    align-items: center;
     gap: 8px;
 }
 
-.execution-item {
-    border-left: 4px solid #ddd;
-    padding: 10px 15px;
-    margin: 8px 0;
-    background: #f8f9fa;
-    border-radius: 0 4px 4px 0;
+.schedule-item h4::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
 }
 
-.execution-success {
-    border-left-color: #28a745;
+.schedule-enabled h4::before {
+    background-color: #4caf50;
 }
 
-.execution-failed {
-    border-left-color: #dc3545;
-}
-
-.execution-partial {
-    border-left-color: #ffc107;
-}
-
-.execution-header {
-    display: flex;
-    justify-content: space-between;
-    font-weight: 500;
-}
-
-.execution-details {
-    font-size: 0.9em;
-    color: #666;
-    margin-top: 5px;
-}
-
-/* Modal Styles */
-.modal {
-    position: fixed;
-    z-index: 1000;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-}
-
-.modal-content {
-    background-color: white;
-    margin: 5% auto;
-    padding: 20px;
-    border-radius: 8px;
-    width: 600px;
-    max-height: 80vh;
-    overflow-y: auto;
-}
-
-.close {
-    float: right;
-    font-size: 28px;
-    font-weight: bold;
-    cursor: pointer;
-}
-
-.form-group {
-    margin-bottom: 15px;
-}
-
-.form-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 15px;
-}
-
-.checkbox-group {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 15px;
-    margin-top: 5px;
-}
-
-.checkbox-group label {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-}
-
-.form-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-    margin-top: 20px;
+.schedule-disabled h4::before {
+    background-color: #f44336;
+    animation: none;
 }

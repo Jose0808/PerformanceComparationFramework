@@ -1,8 +1,13 @@
-import { app, BrowserWindow, ipcMain, shell } from 'electron';
-import { spawn } from 'child_process';
+import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
+import { ChildProcess, spawn } from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
+import * as os from 'os';
 import { config } from 'process';
+import { TestScheduler } from '../src/scheduler/TestScheduler';
+import { CommandOptions, CommandResult, ProjectPaths } from './types';
+import { executeCommand, getProjectPaths, runPlaywright } from './commands';
+import { SchedulerClient } from '../src/scheduler/SchedulerClient';
 
 app.disableHardwareAcceleration();
 
@@ -26,64 +31,8 @@ stabilitySwitches.forEach((switchConfig) => {
 
 let mainWindow: BrowserWindow | null = null;
 
-// Interfaces para tipado
-interface ProjectPaths {
-  basePath: string;
-  testsDir: string;
-  dataDir: string;
-  envFile: string;
-  configFile: string;
-  nodeModules: string;
-  packageJson: string;
-  reportsDir: string;
-}
-
-interface CommandResult {
-  success: boolean;
-  output: string;
-  code?: number;
-  error?: string;
-}
-
-interface CommandOptions {
-  stdio?: any;
-  onData?: string;
-  timeout?: number;
-  cwd?: string;
-  detached?: boolean;
-}
-
-// Función para obtener la ruta base correcta según el entorno
-function getBasePath(): string {
-  console.log(app.isPackaged);
-  if (app.isPackaged) {
-    console.log(path.join(path.dirname(process.execPath), 'resources'));
-    return path.join(path.dirname(process.execPath), 'resources');
-  } else {
-    console.log(path.join(__dirname, '..'));
-    return path.join(__dirname, '..');
-  }
-}
-
-// Función para obtener rutas de archivos críticos
-function getProjectPaths(): ProjectPaths {
-  const basePath = getBasePath();
-  console.log("BasePath: ", basePath);
-
-  return {
-    basePath,
-    testsDir: path.join(basePath, 'src', 'tests'),
-    dataDir: path.join(basePath, 'src', 'data-driven'),
-    envFile: path.join(basePath, '.env'),
-    configFile: path.join(basePath, 'playwright.config.ts'),
-    nodeModules: path.join(basePath, 'node_modules'),
-    packageJson: path.join(basePath, 'package.json'),
-    reportsDir: path.join(basePath, 'reports')
-  };
-}
-
 function runNodeScript(scriptPath: string, args: string[] = []) {
-  const nodeRuntime = process.execPath; 
+  const nodeRuntime = process.execPath;
   return spawn(nodeRuntime, [scriptPath, ...args], {
     cwd: process.resourcesPath,
     stdio: "inherit",
@@ -91,120 +40,8 @@ function runNodeScript(scriptPath: string, args: string[] = []) {
   });
 }
 
-
-// Función ejecutar comandos
-function executeCommand(command: string, args: string[], options: CommandOptions = {}): Promise<CommandResult> {
-  return new Promise((resolve) => {
-    const isWindows = process.platform === 'win32';
-    const paths = getProjectPaths();
-
-    let finalCommand = command;
-    let finalArgs = args;
-
-    // En Windows, usar las versiones .cmd
-    if (isWindows) {
-      if (command === 'npx') {
-        finalCommand = path.join(paths.nodeModules, '.bin', 'playwright.cmd');
-        if (finalArgs[0] === 'playwright') {
-          finalArgs = finalArgs.slice(1);
-        }
-      } else if (command === 'npm') {
-        finalCommand = 'npm.cmd';
-      }
-    } else {
-      if (command === 'npx') {
-        finalCommand = path.join(paths.nodeModules, '.bin', 'playwright');
-        if (finalArgs[0] === 'playwright') {
-          finalArgs = finalArgs.slice(1);
-        }
-      }
-    }
-
-    console.log(`Ejecutando: ${finalCommand} ${finalArgs.join(' ')}`);
-    console.log(`Directorio de trabajo: ${paths.basePath}`);
-
-    const childProcess = spawn(finalCommand, finalArgs, {
-      cwd: paths.basePath,
-      stdio: options.stdio || 'pipe',
-      shell: isWindows,
-      env: {
-        ...process.env,
-        PATH: process.env.PATH,
-        PLAYWRIGHT_CONFIG: paths.configFile,
-        NODE_PATH: paths.nodeModules
-      },
-      ...options
-    } as any);
-
-    let output = '';
-    let errorOutput = '';
-
-    if (childProcess.stdout) {
-      childProcess.stdout.on('data', (data: Buffer) => {
-        const dataStr = data.toString();
-        output += dataStr;
-        if (options.onData && mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.send(options.onData, dataStr);
-        }
-      });
-    }
-
-    if (childProcess.stderr) {
-      childProcess.stderr.on('data', (data: Buffer) => {
-        const dataStr = data.toString();
-        errorOutput += dataStr;
-        if (options.onData && mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.send(options.onData, dataStr);
-        }
-      });
-    }
-
-    childProcess.on('close', (code: number) => {
-      resolve({
-        success: code === 0,
-        output: output + errorOutput,
-        code
-      });
-    });
-
-    childProcess.on('error', (error: Error) => {
-      console.error('Error ejecutando comando:', error);
-      resolve({
-        success: false,
-        output: error.message,
-        error: error.message
-      });
-    });
-
-    if (options.timeout) {
-      setTimeout(() => {
-        if (!childProcess.killed) {
-          childProcess.kill();
-          resolve({
-            success: false,
-            output: 'Timeout ejecutando comando',
-            code: -1
-          });
-        }
-      }, options.timeout);
-    }
-  });
-}
-
-async function runPlaywright(args: string[], options: CommandOptions = {}): Promise<CommandResult> {
-  const paths = getProjectPaths();
-  console.log(paths);
-  const playwrightBin = path.join(
-    paths.nodeModules,
-    '.bin',
-    process.platform === 'win32' ? 'playwright.cmd' : 'playwright'
-  );
-  console.log(playwrightBin);
-
-  return executeCommand(playwrightBin, args, { cwd: paths.basePath, ...options });
-}
-
 function createWindow(): void {
+
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
@@ -462,17 +299,18 @@ ipcMain.handle('save-env-file', async (event: any, envVariables: any): Promise<a
 
 // Ejecutar tests con UI
 ipcMain.handle('run-tests-ui', async (): Promise<any> => {
-  return runPlaywright(['test', '--ui'], { detached: true });
+  return runPlaywright(['test', '--ui']);
 });
 
 // Ejecutar tests automáticamente
 ipcMain.handle('run-tests', async (): Promise<any> => {
-  return runPlaywright(['test'], { onData: 'test-output' });
+  if (mainWindow)
+    return runPlaywright(['test'], { onData: 'test-output', mainWindow });
 });
 
 // Mostrar reporte
 ipcMain.handle('show-report', async (): Promise<any> => {
-  return runPlaywright(['show-report', 'reports/playwright-report'], { detached: true });
+  return runPlaywright(['show-report', 'reports/playwright-report']);
 });
 
 // ======================== UTILIDADES ========================
@@ -651,69 +489,212 @@ ipcMain.handle('analyze-test-file', async (event: any, testFilePath: string): Pr
   }
 });
 
-// ======================== NUEVO: FUNCIONES PARA EJECUTAR COMANDOS SIN DEPENDENCIAS ========================
 
-// ======================== NUEVO: PLANIFICADOR ========================
 
-// Funciones auxiliares para el scheduler
-async function saveProfile(profile: any): Promise<any> {
-  const profilesFile = path.join(__dirname, 'data', 'scheduler-profiles.json');
-  let profiles: any = { profiles: [] };
+//======================== PROGRAMADOR ====================================
+let schedulerClient: SchedulerClient | null = null;
 
-  if (fs.existsSync(profilesFile)) {
-    profiles = JSON.parse(fs.readFileSync(profilesFile, 'utf-8'));
+// Inicializar cliente del scheduler
+ipcMain.handle('scheduler-init', async (): Promise<any> => {
+  const paths = getProjectPaths();
+  
+  try {
+    if (!schedulerClient) {
+      schedulerClient = new SchedulerClient({
+        projectPath: paths.basePath,
+        servicePort: 3001,
+        serviceHost: '127.0.0.1'
+      });
+      
+      // Configurar eventos del cliente
+      schedulerClient.on('connected', () => {
+        if (mainWindow) {
+          mainWindow.webContents.send('scheduler-connected');
+        }
+      });
+
+      schedulerClient.on('disconnected', () => {
+        if (mainWindow) {
+          mainWindow.webContents.send('scheduler-disconnected');
+        }
+      });
+
+      schedulerClient.on('test-run-started', (data) => {
+        if (mainWindow) {
+          mainWindow.webContents.send('scheduler-test-run-started', data);
+        }
+      });
+
+      schedulerClient.on('test-run-completed', (data) => {
+        if (mainWindow) {
+          mainWindow.webContents.send('scheduler-test-run-completed', data);
+        }
+      });
+
+      schedulerClient.on('test-output', (data) => {
+        if (mainWindow) {
+          mainWindow.webContents.send('scheduler-test-output', data);
+        }
+      });
+
+      schedulerClient.on('status-update', (data) => {
+        if (mainWindow) {
+          mainWindow.webContents.send('scheduler-status-update', data);
+        }
+      });
+
+      schedulerClient.on('schedules-update', (data) => {
+        if (mainWindow) {
+          mainWindow.webContents.send('scheduler-schedules-update', data);
+        }
+      });
+    }
+
+    await schedulerClient.connect();
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Obtener estado del scheduler
+ipcMain.handle('scheduler-get-status', async (): Promise<any> => {
+  if (!schedulerClient) {
+    return { success: false, error: 'Scheduler not initialized' };
   }
 
-  const existingIndex = profiles.profiles.findIndex((p: any) => p.id === profile.id);
-  if (existingIndex >= 0) {
-    profiles.profiles[existingIndex] = profile;
-  } else {
-    profiles.profiles.push(profile);
+  try {
+    const status = await schedulerClient.getStatus();
+    return { success: true, status };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Obtener schedules
+ipcMain.handle('scheduler-get-schedules', async (): Promise<any> => {
+  if (!schedulerClient) {
+    return { success: false, error: 'Scheduler not initialized' };
   }
 
-  // fs.writeFileSync(profilesFile, JSON.stringify(profiles, null, 2));
-  await fs.writeFileSync(profilesFile, JSON.stringify(profiles, null, 2), 'utf8');
-  return { success: true };
-}
-
-async function deleteProfile(profileId: string): Promise<void> {
-  const profilesFile = path.join(__dirname, 'data', 'scheduler-profiles.json');
-  if (fs.existsSync(profilesFile)) {
-    const profiles = JSON.parse(fs.readFileSync(profilesFile, 'utf-8'));
-    profiles.profiles = profiles.profiles.filter((p: any) => p.id !== profileId);
-    fs.writeFileSync(profilesFile, JSON.stringify(profiles, null, 2));
+  try {
+    const schedules = await schedulerClient.getSchedules();
+    return { success: true, schedules };
+  } catch (error: any) {
+    return { success: false, error: error.message };
   }
-}
+});
 
-async function getProfiles(): Promise<any> {
-  const profilesFile = path.join(__dirname, 'data', 'scheduler-profiles.json');
-  if (fs.existsSync(profilesFile)) {
-    return JSON.parse(fs.readFileSync(profilesFile, 'utf-8'));
-  }
-  return { profiles: [] };
-}
-
-async function getExecutionHistory(days: number): Promise<any> {
-  const historyDir = path.join(__dirname, 'data', 'history');
-  const history: any = { executions: [] };
-
-  if (!fs.existsSync(historyDir)) return history;
-
-  const files = fs.readdirSync(historyDir)
-    .filter(f => f.startsWith('execution-history-') && f.endsWith('.json'))
-    .sort()
-    .slice(-3); // Últimos 3 meses
-
-  for (const file of files) {
-    const fileData = JSON.parse(fs.readFileSync(path.join(historyDir, file), 'utf-8'));
-    history.executions.push(...fileData.executions);
+// Crear schedule
+ipcMain.handle('scheduler-create-schedule', async (event: any, scheduleData: any): Promise<any> => {
+  if (!schedulerClient) {
+    return { success: false, error: 'Scheduler not initialized' };
   }
 
-  // Filtrar por días
-  const cutoffDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-  history.executions = history.executions.filter((e: any) =>
-    new Date(e.timestamp) >= cutoffDate
-  );
+  try {
+    const result = await schedulerClient.createSchedule(scheduleData);
+    return { success: true, schedule: result.schedule };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+});
 
-  return history;
-}
+// Actualizar schedule
+ipcMain.handle('scheduler-update-schedule', async (event: any, scheduleId: string, updates: any): Promise<any> => {
+  if (!schedulerClient) {
+    return { success: false, error: 'Scheduler not initialized' };
+  }
+
+  try {
+    const result = await schedulerClient.updateSchedule(scheduleId, updates);
+    return { success: true, schedule: result.schedule };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Eliminar schedule
+ipcMain.handle('scheduler-delete-schedule', async (event: any, scheduleId: string): Promise<any> => {
+  if (!schedulerClient) {
+    return { success: false, error: 'Scheduler not initialized' };
+  }
+
+  try {
+    await schedulerClient.deleteSchedule(scheduleId);
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Ejecutar schedule ahora
+ipcMain.handle('scheduler-run-now', async (event: any, scheduleId: string): Promise<any> => {
+  if (!schedulerClient) {
+    return { success: false, error: 'Scheduler not initialized' };
+  }
+
+  try {
+    const result = await schedulerClient.runScheduleNow(scheduleId);
+    return { success: result.success };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Iniciar schedule
+ipcMain.handle('scheduler-start', async (event: any, scheduleId: string): Promise<any> => {
+  if (!schedulerClient) {
+    return { success: false, error: 'Scheduler not initialized' };
+  }
+
+  try {
+    const result = await schedulerClient.startSchedule(scheduleId);
+    return { success: result.success };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Detener schedule
+ipcMain.handle('scheduler-stop', async (event: any, scheduleId: string): Promise<any> => {
+  if (!schedulerClient) {
+    return { success: false, error: 'Scheduler not initialized' };
+  }
+
+  try {
+    const result = await schedulerClient.stopSchedule(scheduleId);
+    return { success: result.success };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Obtener patrones cron comunes
+ipcMain.handle('scheduler-get-cron-patterns', (): any => {
+  return { 
+    success: true, 
+    patterns: [
+      { label: 'Cada 5 minutos', value: '*/5 * * * *', description: 'Ejecutar cada 5 minutos' },
+      { label: 'Cada 15 minutos', value: '*/15 * * * *', description: 'Ejecutar cada 15 minutos' },
+      { label: 'Cada 30 minutos', value: '*/30 * * * *', description: 'Ejecutar cada 30 minutos' },
+      { label: 'Cada hora', value: '0 * * * *', description: 'Ejecutar al inicio de cada hora' },
+      { label: 'Cada 2 horas', value: '0 */2 * * *', description: 'Ejecutar cada 2 horas' },
+      { label: 'Cada 6 horas', value: '0 */6 * * *', description: 'Ejecutar cada 6 horas' },
+      { label: 'Diario a medianoche', value: '0 0 * * *', description: 'Ejecutar diariamente a las 00:00' },
+      { label: 'Diario a las 9 AM', value: '0 9 * * *', description: 'Ejecutar diariamente a las 09:00' },
+      { label: 'Diario a las 6 PM', value: '0 18 * * *', description: 'Ejecutar diariamente a las 18:00' },
+      { label: 'Lunes a Viernes 9 AM', value: '0 9 * * 1-5', description: 'Ejecutar de lunes a viernes a las 09:00' },
+      { label: 'Fines de semana', value: '0 10 * * 6,0', description: 'Ejecutar sábados y domingos a las 10:00' },
+      { label: 'Semanal (Lunes)', value: '0 9 * * 1', description: 'Ejecutar todos los lunes a las 09:00' },
+      { label: 'Mensual (día 1)', value: '0 9 1 * *', description: 'Ejecutar el día 1 de cada mes a las 09:00' }
+    ]
+  };
+});
+
+// Cleanup al cerrar la aplicación
+app.on('before-quit', async () => {
+  if (schedulerClient) {
+    await schedulerClient.stopService();
+    schedulerClient.disconnect();
+  }
+});

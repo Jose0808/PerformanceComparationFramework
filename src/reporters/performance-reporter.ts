@@ -172,12 +172,8 @@ export default class PerformanceReporter implements Reporter {
       return;
     }
 
-    // Generate console report
-    if (comparison.isIndividualReport) {
-      await this.generateIndividualConsoleReport(comparison);
-    } else {
-      await ConsoleReporter.generate(comparison);
-    }
+    await ConsoleReporter.generate(comparison);
+
 
     // Generate HTML report
     await this.generateHTMLReport(comparison);
@@ -203,10 +199,7 @@ export default class PerformanceReporter implements Reporter {
       console.log('⚠️ No data found for any application');
       return null;
     }
-
-    console.log(`📊 Generating individual report for ${availableRuns[0].appName}`);
-    return this.generateIndividualReport(availableRuns[0]);
-  }
+}
 
   private generateComparisonReport(onPremiseRuns: PerformanceRun[], cloudRuns: PerformanceRun[]): any {
     const bestOnPremise = this.selectBestRun(onPremiseRuns);
@@ -246,19 +239,6 @@ export default class PerformanceReporter implements Reporter {
     return bestRun;
   }
 
-  private generateIndividualReport(run: PerformanceRun): any {
-    return {
-      testName: `${run.flowName} - ${run.appName} Individual`,
-      onpremise: run.appName === 'OnPremise' ? run.execution : this.createEmptyExecution(),
-      cloud: run.appName === 'Cloud' ? run.execution : this.createEmptyExecution(),
-      comparison: {
-        totalDifference: 0,
-        fasterEnvironment: run.appName.toLowerCase() as 'onpremise' | 'cloud',
-        stepComparisons: []
-      },
-      isIndividualReport: true
-    };
-  }
 
   private createEmptyExecution(): TestExecution {
     return {
@@ -268,25 +248,6 @@ export default class PerformanceReporter implements Reporter {
       steps: [],
       timestamp: new Date()
     };
-  }
-
-  private generateIndividualConsoleReport(report: any): void {
-    console.log('\n' + '='.repeat(80));
-    console.log(`📊 INDIVIDUAL REPORT: ${report.testName}`);
-    console.log('='.repeat(80));
-
-    const execution = report.onpremise.totalDuration > 0 ? report.onpremise : report.cloud;
-    console.log(`\n🕐 TOTAL TIME: ${execution.totalDuration.toFixed(2)}s`);
-    console.log(`📋 STEPS: ${execution.steps.length}`);
-
-    execution.steps.forEach((step: any) => {
-      console.log(`\n📌 ${step.name}: ${step.duration.toFixed(2)}s`);
-      step.subSteps?.forEach((subStep: any) => {
-        console.log(`   ├─ ${subStep.name}: ${subStep.duration.toFixed(2)}s`);
-      });
-    });
-
-    console.log('\n' + '='.repeat(80));
   }
 
   private async generateHTMLReport(comparison: any): Promise<void> {
@@ -301,23 +262,15 @@ export default class PerformanceReporter implements Reporter {
         outputPath: reportDir
       };
 
-      if (comparison.isIndividualReport) {
-        await this.generateIndividualHTMLReport(comparison, reportConfig);
-      } else {
-        const generator = new ReportGenerator();
-        await generator.generateHTMLReport(comparison, reportConfig);
-      }
+      const generator = new ReportGenerator();
+      await generator.generateHTMLReport(comparison, reportConfig);
+
 
       console.log(`✅ Report generated successfully: ${fullPath}`);
 
     } catch (error) {
       console.error('❌ Error generating HTML report:', error);
     }
-  }
-
-  private async generateIndividualHTMLReport(report: any, config: any): Promise<void> {
-    const generator = new ReportGenerator();
-    await generator.generateHTMLReport(report, config);
   }
 
   private async cleanupOldFiles(): Promise<void> {
