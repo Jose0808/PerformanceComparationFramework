@@ -1,4 +1,4 @@
-import { NetworkLog } from "../metrics/MetricsCollector";
+import { NetworkLog } from "../collectors/MetricsCollector";
 
 export interface SubStep {
     name: string;

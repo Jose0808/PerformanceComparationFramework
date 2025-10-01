@@ -1,4 +1,4 @@
-import { PerformanceMetrics } from '../metrics/MetricsCollector';
+import { PerformanceMetrics } from '../collectors/MetricsCollector';
 import { ConfigManager } from '../config/ConfigManager';
 import * as stats from 'simple-statistics';
 

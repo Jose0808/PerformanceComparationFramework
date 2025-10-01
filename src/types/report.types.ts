@@ -1,4 +1,4 @@
-import { NetworkLog } from "../metrics/MetricsCollector";
+import { NetworkLog } from "../collectors/MetricsCollector";
 import { TestExecution } from "./timer.types";
 
 export interface ComparisonReport {

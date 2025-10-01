@@ -78,10 +78,6 @@ async function validateConfiguration(config: ConfigManager): Promise<void> {
       name: 'Output Directory',
       check: () => config.reporting.outputPath && config.reporting.outputPath.length > 0
     },
-    {
-      name: 'Network Configuration',
-      check: () => config.network.downloadThroughput > 0 && config.network.uploadThroughput > 0
-    }
   ];
 
   for (const validation of validations) {
@@ -160,21 +156,6 @@ function displayTestConfiguration(appConfig: ConfigManager, playwrightConfig: Fu
   console.log(`  Cooldown between runs: ${appConfig.test.cooldownBetweenRuns}ms`);
   console.log(`  Browser restart frequency: every ${appConfig.test.browserRestartFrequency} runs`);
 
-  // Network Configuration
-  console.log('\n🌐 Network Settings:');
-  console.log(`  Conditions: ${appConfig.test.networkConditions}`);
-  console.log(`  Download: ${(appConfig.network.downloadThroughput / 1000000).toFixed(1)} Mbps`);
-  console.log(`  Upload: ${(appConfig.network.uploadThroughput / 1000000).toFixed(1)} Mbps`);
-  console.log(`  Latency: ${appConfig.network.latency}ms`);
-
-  // Monitoring Configuration
-  console.log('\n📊 Monitoring:');
-  console.log(`  Web Vitals: ${appConfig.monitoring.captureWebVitals ? '✅' : '❌'}`);
-  console.log(`  Network Metrics: ${appConfig.monitoring.captureNetworkMetrics ? '✅' : '❌'}`);
-  console.log(`  Custom Metrics: ${appConfig.monitoring.captureCustomMetrics ? '✅' : '❌'}`);
-  console.log(`  Memory Usage: ${appConfig.monitoring.monitorMemoryUsage ? '✅' : '❌'}`);
-  console.log(`  Console Logs: ${appConfig.monitoring.captureConsoleLogs ? '✅' : '❌'}`);
-
   // Reporting Configuration
   console.log('\n📄 Reporting:');
   console.log(`  Output Path: ${appConfig.reporting.outputPath}`);
@@ -188,14 +169,6 @@ function displayTestConfiguration(appConfig: ConfigManager, playwrightConfig: Fu
   console.log(`  Retries: ${playwrightConfig.projects[0].retries}`);
   console.log(`  Timeout: ${playwrightConfig.projects[0].timeout}ms`);
   console.log(`  Fully Parallel: ${playwrightConfig.fullyParallel ? '✅' : '❌'}`);
-
-  // // Performance Thresholds
-  // console.log('\n🎯 Performance Thresholds:');
-  // console.log(`  LCP: ${appConfig.thresholds.lcp}ms`);
-  // console.log(`  FID: ${appConfig.thresholds.fid}ms`);
-  // console.log(`  CLS: ${appConfig.thresholds.cls}`);
-  // console.log(`  TTFB: ${appConfig.thresholds.ttfb}ms`);
-  // console.log(`  Login Time: ${appConfig.thresholds.loginTime}ms`);
 
   console.log('\n' + '='.repeat(60) + '\n');
 }

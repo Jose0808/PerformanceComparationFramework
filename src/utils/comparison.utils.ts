@@ -1,4 +1,4 @@
-import { NetworkLog } from '../metrics/MetricsCollector';
+import { NetworkLog } from '../collectors/MetricsCollector';
 import { ComparisonReport, ComparisonData, StepComparison, NetworkComparison } from '../types/report.types';
 import { TestExecution } from '../types/timer.types';
 

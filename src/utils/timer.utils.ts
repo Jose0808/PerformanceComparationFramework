@@ -1,4 +1,4 @@
-import { MetricsCollector } from "../metrics/MetricsCollector";
+import { MetricsCollector } from "../collectors/MetricsCollector";
 import { Step, SubStep, TestExecution } from "../types/timer.types";
 
 export class TestTimer extends MetricsCollector {

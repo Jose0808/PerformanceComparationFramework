@@ -1,6 +1,6 @@
 import { Page, Locator, expect, FrameLocator } from '@playwright/test';
 import { ConfigManager } from '../config/ConfigManager';
-import { MetricsCollector } from '../metrics/MetricsCollector';
+import { MetricsCollector } from '../collectors/MetricsCollector';
 import { TestTimer } from '../utils/timer.utils';
 
 /**
@@ -558,55 +558,6 @@ export abstract class BasePage {
     return screenshotPath;
   }
 
-  /**
-   * Clear browser data (cookies, storage, cache)
-   */
-  async clearBrowserData(): Promise<void> {
-    const context = this.page.context();
-    await Promise.all([
-      context.clearCookies(),
-      context.clearPermissions(),
-      this.page.evaluate(() => {
-        localStorage.clear();
-        sessionStorage.clear();
-      })
-    ]);
-    console.log('Browser data cleared');
-  }
-
-  /**
-   * Enable network throttling for latency testing
-   */
-  async enableNetworkThrottling(): Promise<void> {
-    const cdp = await this.page.context().newCDPSession(this.page);
-
-    await cdp.send('Network.enable');
-    await cdp.send('Network.emulateNetworkConditions', {
-      offline: false,
-      latency: this.config.network?.latency || 100,
-      downloadThroughput: this.config.network?.downloadThroughput || 750000,
-      uploadThroughput: this.config.network?.uploadThroughput || 250000,
-      connectionType: 'cellular4g'
-    });
-
-    console.log('Network throttling enabled');
-  }
-
-  /**
-   * Disable network throttling
-   */
-  async disableNetworkThrottling(): Promise<void> {
-    const cdp = await this.page.context().newCDPSession(this.page);
-
-    await cdp.send('Network.emulateNetworkConditions', {
-      offline: false,
-      latency: 0,
-      downloadThroughput: -1,
-      uploadThroughput: -1
-    });
-
-    console.log('Network throttling disabled');
-  }
 
   /**
    * Scroll to element
@@ -642,30 +593,4 @@ export abstract class BasePage {
     return this.metricsCollector.getNetworkLogs();
   }
 
-  /**
-   * Collect all performance metrics
-   * @returns Promise<any>
-   */
-  async collectPerformanceMetrics(): Promise<any> {
-    return await this.metricsCollector.collectAllMetrics();
-  }
-
-  /**
-   * Get page performance metrics
-   * @returns Promise<any>
-   */
-  async getPageMetrics(): Promise<any> {
-    return await this.page.evaluate(() => {
-      const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
-      const paint = performance.getEntriesByType('paint');
-
-      return {
-        loadTime: navigation.loadEventEnd - navigation.loadEventStart,
-        domContentLoaded: navigation.domContentLoadedEventEnd - navigation.domContentLoadedEventStart,
-        firstPaint: paint.find(p => p.name === 'first-paint')?.startTime || 0,
-        firstContentfulPaint: paint.find(p => p.name === 'first-contentful-paint')?.startTime || 0,
-        timeToInteractive: navigation.domInteractive - navigation.fetchStart
-      };
-    });
-  }
 }

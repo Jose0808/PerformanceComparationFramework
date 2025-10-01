@@ -41,42 +41,28 @@ const {
 
   // Environment
   ENVIRONMENT = 'pre',
-  NETWORK_CONDITIONS = '4g',
   PARALLEL_INSTANCES = '2',
   ITERATIONS = '3',
 
   // Logging
   LOG_LEVEL = 'info',
 
-  // Resource Monitoring
-  MEMORY_THRESHOLD_MB = '2048',
-  CPU_THRESHOLD_PERCENTAGE = '80',
-
   // Failure Handling
   FAILURE_SCREENSHOT = 'true',
-
-  // Network Throttling
-  NETWORK_DOWNLOAD_THROUGHPUT = '1500000',
-  NETWORK_UPLOAD_THROUGHPUT = '750000',
-  NETWORK_LATENCY = '20',
-  NETWORK_PACKET_LOSS = '0'
 } = process.env;
 
-/* 🔑 Detectar si estamos en producción (Electron instalado) */
+/* Detectar si Electron instalado */
 const resourcesBrowsersPath = path.join(process.resourcesPath || '', 'browsers');
 if (fs.existsSync(resourcesBrowsersPath)) {
   process.env.PLAYWRIGHT_BROWSERS_PATH = resourcesBrowsersPath;
-  console.log(`👉 Usando navegadores empaquetados en: ${resourcesBrowsersPath}`);
+  console.log(`Usando navegadores empaquetados en: ${resourcesBrowsersPath}`);
 } else {
-  console.log(`👉 Usando navegadores Playwright por defecto (node_modules)`);
+  console.log(`Usando navegadores Playwright por defecto (node_modules)`);
 }
 
 // Parse boolean values
 const isHeadless = HEADLESS_MODE === 'true';
 const isParallel = RUN_PARALLEL === 'true';
-const continueOnFailure = CONTINUE_ON_FAILURE === 'true';
-const disableImages = DISABLE_IMAGES === 'true';
-const disableJavaScript = DISABLE_JAVASCRIPT === 'true';
 const generateScreenshots = GENERATE_SCREENSHOTS === 'true';
 const generateVideo = GENERATE_VIDEO_RECORDING === 'true';
 const generateTrace = GENERATE_TRACE_FILES === 'true';
@@ -90,12 +76,6 @@ const retries = parseInt(RETRY_COUNT);
 const maxConsecutiveFailures = parseInt(MAX_CONSECUTIVE_FAILURES);
 const loadTimeout = parseInt(LOAD_TIMEOUT);
 const scenarioTimeoutMultiplier = parseFloat(SCENARIO_TIMEOUT_MULTIPLIER);
-const memoryThreshold = parseInt(MEMORY_THRESHOLD_MB);
-const cpuThreshold = parseInt(CPU_THRESHOLD_PERCENTAGE);
-const downloadThroughput = parseInt(NETWORK_DOWNLOAD_THROUGHPUT);
-const uploadThroughput = parseInt(NETWORK_UPLOAD_THROUGHPUT);
-const latency = parseInt(NETWORK_LATENCY);
-const packetLoss = parseInt(NETWORK_PACKET_LOSS);
 
 // Configure reporters based on FORMAT
 const reporters: any = [];
@@ -158,19 +138,6 @@ export default defineConfig({
       height: viewportHeight
     },
 
-    /* Network conditions */
-    ...(NETWORK_CONDITIONS !== 'none' && {
-      launchOptions: {
-        args: [
-          `--disable-images=${disableImages}`,
-          `--disable-javascript=${disableJavaScript}`,
-          `--network-throughput=${downloadThroughput},${uploadThroughput}`,
-          `--network-latency=${latency}`,
-          `--network-packet-loss=${packetLoss}`
-        ]
-      }
-    }),
-
     // No usar storage state global por defecto
     storageState: undefined,
 
@@ -219,12 +186,9 @@ export default defineConfig({
     environment: ENVIRONMENT,
     browserType: BROWSER_TYPE,
     viewport: `${viewportWidth}x${viewportHeight}`,
-    networkConditions: NETWORK_CONDITIONS,
     parallel: isParallel,
     iterations: ITERATION_COUNT,
     parallelInstances: PARALLEL_INSTANCES,
-    memoryThreshold: `${memoryThreshold}MB`,
-    cpuThreshold: `${cpuThreshold}%`,
     logLevel: LOG_LEVEL
   },
 

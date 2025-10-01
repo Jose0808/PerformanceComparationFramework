@@ -505,7 +505,7 @@ ipcMain.handle('scheduler-init', async (): Promise<any> => {
         servicePort: 3001,
         serviceHost: '127.0.0.1'
       });
-      
+
       // Configurar eventos del cliente
       schedulerClient.on('connected', () => {
         if (mainWindow) {
@@ -692,9 +692,9 @@ ipcMain.handle('scheduler-get-cron-patterns', (): any => {
 });
 
 // Cleanup al cerrar la aplicación
-app.on('before-quit', async () => {
-  if (schedulerClient) {
-    await schedulerClient.stopService();
-    schedulerClient.disconnect();
-  }
-});
+// app.on('before-quit', async () => {
+//   if (schedulerClient) {
+//     await schedulerClient.stopService();
+//     schedulerClient.disconnect();
+//   }
+// });

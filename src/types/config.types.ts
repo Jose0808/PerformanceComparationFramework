@@ -44,7 +44,6 @@ export interface TestConfig {
   clearCookiesBetweenRuns: boolean;
   continueOnFailure: boolean;
   maxConsecutiveFailures: number;
-  regressionThresholdPercentage: number;
   storePath: string;
 }
 

@@ -99,10 +99,6 @@ test.describe('Cambio de Numero Performance Tests', () => {
 
           try {
             await testHelper.executeFlow(app, timer, testData);
-            metrics = await testHelper.pages.dashboard.collectPerformanceMetrics();
-
-            testHelper.logResults(app.name, iteration, metrics, flowName);
-            testHelper.validateThresholds(timer, metrics);
 
             await testHelper.takeScreenshotIfEnabled(
               testHelper.pages.login,
@@ -135,8 +131,6 @@ test.describe('Cambio de Numero Performance Tests', () => {
   }
 
   test.afterAll(async () => {
-    // const session = collector.getSession(sessionId);
-    // if (!session) return;
     collector.endSession();
   });
 

@@ -12,21 +12,6 @@ export class BaseTestHelper {
     console.log(`🚀 ${appName} - ${flowName} - Ejecución ${iteration}`);
   }
 
-  logResults(appName: string, iteration: number, metrics: any, flowName: string) {
-    console.log(`✅ ${appName} - ${flowName} - Ejecución ${iteration} completado`);
-    console.log(`📊 LCP: ${metrics.lcp}ms | FCP: ${metrics.fcp}ms | TTFB: ${metrics.ttfb}ms`);
-  }
-
-  validateThresholds(timer: TestTimer, metrics: any) {
-    const thresholdCheck = timer.checkThresholds(metrics);
-    if (!thresholdCheck.passed) {
-      console.warn(`⚠️ Threshold violations:`);
-      thresholdCheck.failures.forEach((failure: string) =>
-        console.warn(`  - ${failure}`)
-      );
-    }
-  }
-
   async takeScreenshotIfEnabled(page: any, appName: string, iteration: number, flowName: string) {
     if (this.config.reporting.generateScreenshots) {
       const filename = `success_${appName.replace(/\s+/g, '_')}_${flowName}_run_${iteration}`;
@@ -56,22 +41,6 @@ export class BaseTestHelper {
     }
   ) {
     const executionData = timer.getExecution(appName, flowName);
-
-    // Agregar datos de métricas al execution si están disponibles
-    // if (metrics) {
-    //   executionData.metrics = {
-    //     lcp: metrics.lcp,
-    //     fcp: metrics.fcp,
-    //     ttfb: metrics.ttfb,
-    //     cls: metrics.cls,
-    //     fid: metrics.fid
-    //   };
-    // }
-
-    // Agregar información de error si existe
-    // if (testError) {
-    //   executionData.error = testError;
-    // }
 
     // Obtener collector y almacenar datos
     const collector = ExecutionCollector.getInstance();

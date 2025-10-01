@@ -690,12 +690,8 @@ document.addEventListener('keydown', (event) => {
 
 // ======================== PLANIFICADOR DE PRUEBAS ========================
 
-let schedulerConnected = false;
-let currentSchedules = [];
-let editingScheduleId = null;
-let cronPatterns = [];
+let availableTests = [];
 
-// Función para inicializar scheduler desde la navegación
 async function initSchedulerSection() {
     try {
         // Cargar patrones cron
@@ -705,6 +701,9 @@ async function initSchedulerSection() {
             populateCronPresets();
         }
 
+        // Cargar tests disponibles
+        await loadAvailableTests();
+
         // Intentar conectar
         await schedulerInit();
     } catch (error) {
@@ -713,168 +712,66 @@ async function initSchedulerSection() {
     }
 }
 
-// Conectar al servicio del scheduler
-async function schedulerInit() {
-    updateServiceStatus('loading', 'Conectando...');
-
-    try {
-        const result = await ipcRenderer.invoke('scheduler-init');
-
-        if (result.success) {
-            schedulerConnected = true;
-            updateServiceStatus('ok', 'Conectado');
-            await refreshSchedules();
-            showMessage('success', 'Conectado al servicio de programación');
-        } else {
-            schedulerConnected = false;
-            updateServiceStatus('error', `Error: ${result.error}`);
-            showMessage('error', `Error conectando: ${result.error}`);
-        }
-    } catch (error) {
-        schedulerConnected = false;
-        updateServiceStatus('error', 'Desconectado');
-        showMessage('error', `Error de conexión: ${error.message}`);
-    }
-}
-
-// Actualizar estado del servicio
-function updateServiceStatus(status, message) {
-    const statusElement = document.getElementById('service-status');
-    const infoElement = document.getElementById('service-info');
-
-    if (statusElement) {
-        const statusClass = status === 'ok' ? 'status-ok' :
-            status === 'error' ? 'status-error' : 'status-loading';
-        statusElement.innerHTML = `<span class="status-indicator ${statusClass}"></span>${message}`;
-    }
-
-    if (infoElement) {
-        infoElement.textContent = `Estado del servicio: ${message}`;
-    }
-}
-
-// Poblar select con patrones cron comunes
 function populateCronPresets() {
     const select = document.getElementById('cron-preset');
     if (!select) return;
-
     select.innerHTML = '<option value="">Seleccionar patrón común...</option>';
-
     cronPatterns.forEach(pattern => {
         const option = document.createElement('option');
-        option.value = pattern.value;
-        option.textContent = `${pattern.label} - ${pattern.description}`;
+        option.value = pattern.value; option.textContent = `${pattern.label} - ${pattern.description}`;
         select.appendChild(option);
     });
 }
 
-// Establecer expresión cron desde preset
+// Establecer expresión cron desde preset 
 function setCronFromPreset() {
     const preset = document.getElementById('cron-preset');
     const expression = document.getElementById('cron-expression');
-
     if (preset && expression && preset.value) {
         expression.value = preset.value;
     }
 }
 
-// Refrescar lista de schedules
-async function refreshSchedules() {
-    if (!schedulerConnected) {
-        document.getElementById('schedules-list').innerHTML =
-            '<div style="padding: 20px; color: #f44336;">No conectado al servicio</div>';
-        return;
+// Actualizar el estado del servicio 
+function updateServiceStatus(status, message) {
+    const statusElement = document.getElementById('service-status');
+    const infoElement = document.getElementById('service-info');
+    if (statusElement) {
+        const statusClass = status === 'ok' ? 'status-ok' : status === 'error' ? 'status-error' : 'status-loading';
+        statusElement.innerHTML = `<span class="status-indicator ${statusClass}"></span>${message}`;
     }
+    if (infoElement) {
+        infoElement.textContent = `Estado del servicio: ${message}`;
+    }
+}
 
+// Cargar tests disponibles
+async function loadAvailableTests() {
     try {
-        const result = await ipcRenderer.invoke('scheduler-get-schedules');
-
+        const result = await ipcRenderer.invoke('list-test-files');
         if (result.success) {
-            currentSchedules = result.schedules;
-            displaySchedules(result.schedules);
-
-            const statusResult = await ipcRenderer.invoke('scheduler-get-status');
-            if (statusResult.success) {
-                updateServiceInfo(statusResult.status);
-            }
-        } else {
-            showMessage('error', `Error cargando programaciones: ${result.error}`);
+            availableTests = result.testFiles.map(test => ({
+                name: test.name,
+                path: test.relativePath,
+                fullPath: test.fullPath
+            }));
+            console.log('Loaded available tests:', availableTests);
         }
     } catch (error) {
-        showMessage('error', `Error de conexión: ${error.message}`);
+        console.error('Error loading tests:', error);
+        showMessage('error', 'Error cargando lista de tests');
     }
 }
 
-// Mostrar schedules en la interfaz
-function displaySchedules(schedules) {
-    const container = document.getElementById('schedules-list');
-
-    if (schedules.length === 0) {
-        container.innerHTML = `
-            <div style="padding: 20px; text-align: center; color: #666;">
-                <p>No hay programaciones configuradas</p>
-                <p>Haga clic en "Nueva Programación" para comenzar</p>
-            </div>
-        `;
-        return;
-    }
-
-    let html = '';
-    schedules.forEach(schedule => {
-        const lastRun = schedule.lastRun ? new Date(schedule.lastRun).toLocaleString() : 'Nunca';
-        const nextRun = schedule.nextRun ? new Date(schedule.nextRun).toLocaleString() : 'No programado';
-        const recentRuns = schedule.runHistory.slice(-3).reverse();
-
-        const statusIcon = schedule.enabled ? '🟢' : '🔴';
-        const statusText = schedule.enabled ? 'Activo' : 'Detenido';
-
-        html += `
-            <div class="schedule-item" style="border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin: 10px 0; background: white;">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                    <div style="flex: 1;">
-                        <h4 style="margin: 0 0 10px 0;">${statusIcon} ${schedule.name}</h4>
-                        <div style="font-size: 12px; color: #666; line-height: 1.4;">
-                            <div><strong>Programación:</strong> ${schedule.cronExpression}</div>
-                            <div><strong>Estado:</strong> ${statusText}</div>
-                            <div><strong>Última ejecución:</strong> ${lastRun}</div>
-                            <div><strong>Próxima ejecución:</strong> ${nextRun}</div>
-                            ${schedule.testPattern ? `<div><strong>Patrón:</strong> ${schedule.testPattern}</div>` : ''}
-                        </div>
-                    </div>
-                    
-                    <div style="display: flex; flex-direction: column; gap: 5px; margin-left: 15px;">
-                        <button class="btn btn-sm" onclick="runScheduleNow('${schedule.id}')" style="font-size: 11px; padding: 4px 8px;">
-                            Ejecutar Ahora
-                        </button>
-                        ${schedule.enabled ?
-                `<button class="btn btn-sm btn-warning" onclick="stopSchedule('${schedule.id}')" style="font-size: 11px; padding: 4px 8px;">Pausar</button>` :
-                `<button class="btn btn-sm btn-success" onclick="startSchedule('${schedule.id}')" style="font-size: 11px; padding: 4px 8px;">Iniciar</button>`
-            }
-                        <button class="btn btn-sm btn-secondary" onclick="editSchedule('${schedule.id}')" style="font-size: 11px; padding: 4px 8px;">
-                            Editar
-                        </button>
-                        <button class="btn btn-sm" onclick="deleteSchedule('${schedule.id}')" style="font-size: 11px; padding: 4px 8px; background: #f44336; color: white;">
-                            Eliminar
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-    });
-
-    container.innerHTML = html;
-}
-
-// Mostrar formulario para crear schedule
 function showCreateScheduleForm() {
     editingScheduleId = null;
     document.getElementById('form-title').textContent = 'Nueva Programación';
-    clearScheduleForm();
+    // clearScheduleForm();
+    populateTestSelector();
     document.getElementById('schedule-form').classList.remove('hidden');
     document.getElementById('schedule-name').focus();
 }
 
-// Mostrar formulario para editar schedule
 function editSchedule(scheduleId) {
     const schedule = currentSchedules.find(s => s.id === scheduleId);
     if (!schedule) return;
@@ -883,45 +780,98 @@ function editSchedule(scheduleId) {
     document.getElementById('form-title').textContent = 'Editar Programación';
 
     document.getElementById('schedule-name').value = schedule.name;
-    document.getElementById('test-pattern').value = schedule.testPattern || '';
     document.getElementById('cron-expression').value = schedule.cronExpression;
     document.getElementById('schedule-enabled').checked = schedule.enabled;
-    document.getElementById('timeout').value = schedule.options?.timeout || 30;
 
-    document.getElementById('browser-chromium').checked = !schedule.options?.browsers || schedule.options.browsers.includes('chromium');
-    document.getElementById('browser-firefox').checked = schedule.options?.browsers?.includes('firefox') || false;
-    document.getElementById('browser-webkit').checked = schedule.options?.browsers?.includes('webkit') || false;
+    // Poblar selector de tests y marcar los seleccionados
+    populateTestSelector(schedule.testFiles || []);
 
     document.getElementById('schedule-form').classList.remove('hidden');
     document.getElementById('schedule-name').focus();
 }
 
-// Limpiar formulario
-function clearScheduleForm() {
-    document.getElementById('schedule-name').value = '';
-    document.getElementById('test-pattern').value = '';
-    document.getElementById('cron-expression').value = '';
-    document.getElementById('cron-preset').value = '';
-    document.getElementById('schedule-enabled').checked = true;
-    document.getElementById('timeout').value = 30;
-    document.getElementById('browser-chromium').checked = true;
-    document.getElementById('browser-firefox').checked = false;
-    document.getElementById('browser-webkit').checked = false;
+
+function populateTestSelector(selectedTests = []) {
+    const testSelectorDiv = document.getElementById('test-selector');
+    if (!testSelectorDiv) return;
+
+    if (availableTests.length === 0) {
+        testSelectorDiv.innerHTML = '<p style="color: #666; font-size: 12px;">No hay tests disponibles</p>';
+        return;
+    }
+
+    let html = '<div style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 10px; background: white;">';
+
+    // Opción para seleccionar todos
+    html += `
+        <label style="display: block; margin-bottom: 8px; padding: 5px; background: #f0f0f0; border-radius: 3px;">
+            <input type="checkbox" id="select-all-tests" onchange="toggleAllTests(this.checked)" style="margin-right: 8px;">
+            <strong>Seleccionar todos</strong>
+        </label>
+        <hr style="margin: 10px 0; border: none; border-top: 1px solid #ddd;">
+    `;
+
+    availableTests.forEach((test, index) => {
+        const isChecked = selectedTests.includes(test.name) || selectedTests.length === 0;
+        html += `
+            <label style="display: block; margin-bottom: 5px; padding: 3px; cursor: pointer;" 
+                   onmouseover="this.style.background='#f5f5f5'" 
+                   onmouseout="this.style.background='transparent'">
+                <input type="checkbox" 
+                       class="test-checkbox" 
+                       value="${test.name}" 
+                       ${isChecked ? 'checked' : ''}
+                       onchange="updateSelectAllCheckbox()"
+                       style="margin-right: 8px;">
+                <span style="font-size: 13px;">${test.name.replace('.spec.ts', '')}</span>
+            </label>
+        `;
+    });
+
+    html += '</div>';
+    html += `
+        <div style="margin-top: 8px; font-size: 11px; color: #666;">
+            <span id="selected-tests-count">0</span> test(s) seleccionado(s)
+        </div>
+    `;
+
+    testSelectorDiv.innerHTML = html;
+    updateSelectedTestsCount();
+    updateSelectAllCheckbox();
 }
 
-// Cancelar formulario
-function cancelScheduleForm() {
-    document.getElementById('schedule-form').classList.add('hidden');
-    editingScheduleId = null;
+function toggleAllTests(checked) {
+    document.querySelectorAll('.test-checkbox').forEach(checkbox => {
+        checkbox.checked = checked;
+    });
+    updateSelectedTestsCount();
 }
 
-// Guardar schedule
+function updateSelectAllCheckbox() {
+    const allCheckboxes = document.querySelectorAll('.test-checkbox');
+    const checkedCheckboxes = document.querySelectorAll('.test-checkbox:checked');
+    const selectAllCheckbox = document.getElementById('select-all-tests');
+
+    if (selectAllCheckbox) {
+        selectAllCheckbox.checked = allCheckboxes.length === checkedCheckboxes.length;
+        selectAllCheckbox.indeterminate = checkedCheckboxes.length > 0 && checkedCheckboxes.length < allCheckboxes.length;
+    }
+
+    updateSelectedTestsCount();
+}
+
+function updateSelectedTestsCount() {
+    const count = document.querySelectorAll('.test-checkbox:checked').length;
+    const countElement = document.getElementById('selected-tests-count');
+    if (countElement) {
+        countElement.textContent = count;
+    }
+}
+
 async function saveSchedule() {
     const name = document.getElementById('schedule-name').value.trim();
-    const testPattern = document.getElementById('test-pattern').value.trim();
     const cronExpression = document.getElementById('cron-expression').value.trim();
     const enabled = document.getElementById('schedule-enabled').checked;
-    const timeout = parseInt(document.getElementById('timeout').value);
 
     if (!name) {
         showMessage('error', 'El nombre es requerido');
@@ -933,22 +883,20 @@ async function saveSchedule() {
         return;
     }
 
-    const browsers = [];
-    if (document.getElementById('browser-chromium').checked) browsers.push('chromium');
-    if (document.getElementById('browser-firefox').checked) browsers.push('firefox');
-    if (document.getElementById('browser-webkit').checked) browsers.push('webkit');
+    // Obtener tests seleccionados
+    const selectedTests = Array.from(document.querySelectorAll('.test-checkbox:checked'))
+        .map(checkbox => checkbox.value);
 
-    if (browsers.length === 0) {
-        showMessage('error', 'Seleccione al menos un navegador');
-        return;
+    if (selectedTests.length === 0 && !testPattern) {
+        const confirm = window.confirm('No ha seleccionado ningún test. ¿Desea ejecutar todos los tests?');
+        if (!confirm) return;
     }
 
     const scheduleData = {
         name,
         cronExpression,
-        testPattern: testPattern || undefined,
+        testFiles: selectedTests.length > 0 ? selectedTests : undefined,
         enabled,
-        options: { timeout, browsers }
     };
 
     try {
@@ -971,20 +919,72 @@ async function saveSchedule() {
     }
 }
 
-// Ejecutar schedule manualmente
-async function runScheduleNow(scheduleId) {
-    try {
-        const result = await ipcRenderer.invoke('scheduler-run-now', scheduleId);
-
+// Actualizar lista de programaciones 
+async function refreshSchedules() {
+    if (!schedulerConnected) {
+        document.getElementById('schedules-list').innerHTML = '<div style="padding: 20px; color: #f44336;">No conectado al servicio</div>';
+        return;
+    } try {
+        const result = await ipcRenderer.invoke('scheduler-get-schedules');
         if (result.success) {
-            showMessage('success', 'Ejecución iniciada');
-            document.getElementById('schedule-monitor').classList.remove('hidden');
-            addScheduleConsoleText('Ejecución manual iniciada...\n');
+            currentSchedules = result.schedules;
+            displaySchedules(result.schedules);
+            const statusResult = await ipcRenderer.invoke('scheduler-get-status');
+            if (statusResult.success) {
+                updateServiceInfo(statusResult.status);
+
+            }
+        } else {
+            showMessage('error', `Error cargando programaciones: ${result.error}`);
+        }
+    } catch (error) {
+        showMessage('error', `Error de conexión: ${error.message}`);
+    }
+}
+
+// Eliminar schedule 
+async function deleteSchedule(scheduleId) {
+    const schedule = currentSchedules.find(s => s.id === scheduleId);
+    const scheduleName = schedule ? schedule.name : 'esta programación';
+    if (!confirm(`¿Está seguro de eliminar "${scheduleName}"?`)) { return; }
+    try {
+        const result = await ipcRenderer.invoke('scheduler-delete-schedule', scheduleId);
+        if (result.success) {
+            showMessage('success', 'Programación eliminada'); await refreshSchedules();
+        }
+        else {
+            showMessage('error', `Error: ${result.error}`);
+        }
+    }
+    catch (error) {
+        showMessage('error', `Error eliminando: ${error.message}`);
+    }
+}
+
+// Actualizar información del servicio 
+function updateServiceInfo(status) {
+    const infoElement = document.getElementById('service-info');
+    if (!infoElement || !status.serviceInfo)
+        return;
+    const info = status.serviceInfo;
+    const uptime = Math.floor(info.uptime / 60);
+    const memory = Math.round(info.memoryUsage.heapUsed / 1024 / 1024);
+    infoElement.innerHTML = ` <strong>Información del servicio:</strong><br> PID: ${info.pid} | Uptime: ${uptime} min | Memoria:${memory} MB<br> Horarios: ${status.totalSchedules} total, ${status.activeSchedules} activos<br> Proyecto: ${info.projectPath} `;
+}
+
+// Eliminar schedule 
+async function stopSchedule(scheduleId) {
+    try {
+        const result = await ipcRenderer.invoke('scheduler-stop', scheduleId);
+        if (result.success) {
+            showMessage('success', 'Programación pausada');
+            await refreshSchedules();
         } else {
             showMessage('error', `Error: ${result.error}`);
         }
-    } catch (error) {
-        showMessage('error', `Error ejecutando: ${error.message}`);
+    }
+    catch (error) {
+        showMessage('error', `Error pausando: ${error.message}`);
     }
 }
 
@@ -992,11 +992,11 @@ async function runScheduleNow(scheduleId) {
 async function startSchedule(scheduleId) {
     try {
         const result = await ipcRenderer.invoke('scheduler-start', scheduleId);
-
         if (result.success) {
             showMessage('success', 'Programación iniciada');
             await refreshSchedules();
-        } else {
+        }
+        else {
             showMessage('error', `Error: ${result.error}`);
         }
     } catch (error) {
@@ -1004,118 +1004,122 @@ async function startSchedule(scheduleId) {
     }
 }
 
-// Detener schedule
-async function stopSchedule(scheduleId) {
-    try {
-        const result = await ipcRenderer.invoke('scheduler-stop', scheduleId);
+// Cancelar formulario
+function cancelScheduleForm() {
+    document.getElementById('schedule-form').classList.add('hidden');
+    editingScheduleId = null;
+}
 
+// Ejecutar schedule manualmente 
+async function runScheduleNow(scheduleId) {
+    try {
+        const result = await ipcRenderer.invoke('scheduler-run-now', scheduleId);
         if (result.success) {
-            showMessage('success', 'Programación pausada');
-            await refreshSchedules();
-        } else {
+            showMessage('success', 'Ejecución iniciada');
+            document.getElementById('schedule-monitor').classList.remove('hidden');
+            addScheduleConsoleText('Ejecución manual iniciada...\n');
+        }
+        else {
             showMessage('error', `Error: ${result.error}`);
         }
     } catch (error) {
-        showMessage('error', `Error pausando: ${error.message}`);
+        showMessage('error', `Error ejecutar: ${error.message}`);
     }
 }
 
-// Eliminar schedule
-async function deleteSchedule(scheduleId) {
-    const schedule = currentSchedules.find(s => s.id === scheduleId);
-    const scheduleName = schedule ? schedule.name : 'esta programación';
+// Conectar al servicio del planificador 
+async function schedulerInit() {
+    updateServiceStatus('loading', 'Conectando...');
+    try {
+        const result = await ipcRenderer.invoke('scheduler-init');
+        if (result.success) {
+            schedulerConnected = true;
+            updateServiceStatus('ok', 'Conectado');
+            await refreshSchedules();
+            showMessage('success', 'Conectado al servicio de programación');
+        }
+        else {
+            schedulerConnected = false;
+            updateServiceStatus('error', `Error: ${result.error}`);
+            showMessage('error', `Error conectando: ${result.error}`);
+        }
+    } catch (error) {
+        schedulerConnected = false;
+        updateServiceStatus('error', 'Desconectado');
+        showMessage('error', `Error de conexión: ${error.message}`);
+    }
+}
 
-    if (!confirm(`¿Está seguro de eliminar "${scheduleName}"?`)) {
+function displaySchedules(schedules) {
+    const container = document.getElementById('schedules-list');
+
+    if (schedules.length === 0) {
+        container.innerHTML = `
+            <div style="padding: 20px; text-align: center; color: #666;">
+                <p>No hay programaciones configuradas</p>
+                <p>Haga clic en "Nueva Programación" para comenzar</p>
+            </div>
+        `;
         return;
     }
 
-    try {
-        const result = await ipcRenderer.invoke('scheduler-delete-schedule', scheduleId);
+    let html = '';
+    schedules.forEach(schedule => {
+        const lastRun = schedule.lastRun ? new Date(schedule.lastRun).toLocaleString() : 'Nunca';
+        const nextRun = schedule.nextRun ? new Date(schedule.nextRun).toLocaleString() : 'No programado';
 
-        if (result.success) {
-            showMessage('success', 'Programación eliminada');
-            await refreshSchedules();
+        const statusIcon = schedule.enabled ? '🟢' : '🔴';
+        const statusText = schedule.enabled ? 'Activo' : 'Detenido';
+
+        // Información de tests
+        let testsInfo = '';
+        if (schedule.testFiles && schedule.testFiles.length > 0) {
+            testsInfo = `<div><strong>Tests:</strong> ${schedule.testFiles.length} seleccionado(s)</div>`;
+        } else if (schedule.testPattern) {
+            testsInfo = `<div><strong>Patrón:</strong> ${schedule.testPattern}</div>`;
         } else {
-            showMessage('error', `Error: ${result.error}`);
+            testsInfo = '<div><strong>Tests:</strong> Todos</div>';
         }
-    } catch (error) {
-        showMessage('error', `Error eliminando: ${error.message}`);
-    }
+
+        html += `
+            <div class="schedule-item" style="border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin: 10px 0; background: white;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div style="flex: 1;">
+                        <h4 style="margin: 0 0 10px 0;">${statusIcon} ${schedule.name}</h4>
+                        <div style="font-size: 12px; color: #666; line-height: 1.4;">
+                            <div><strong>Programación:</strong> ${schedule.cronExpression}</div>
+                            <div><strong>Estado:</strong> ${statusText}</div>
+                            ${testsInfo}
+                            <div><strong>Última ejecución:</strong> ${lastRun}</div>
+                            <div><strong>Próxima ejecución:</strong> ${nextRun}</div>
+                        </div>
+                        ${schedule.testFiles && schedule.testFiles.length > 0 ? `
+                            <div style="margin-top: 8px; padding: 8px; background: #f8f9fa; border-radius: 4px; font-size: 11px;">
+                                <strong>Tests seleccionados:</strong><br>
+                                ${schedule.testFiles.map(test => `• ${test.replace('.spec.ts', '')}`).join('<br>')}
+                            </div>
+                        ` : ''}
+                    </div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 5px; margin-left: 15px;">
+                        <button class="btn btn-sm" onclick="runScheduleNow('${schedule.id}')" style="font-size: 11px; padding: 4px 8px;">
+                            ▶ Ejecutar
+                        </button>
+                        ${schedule.enabled ?
+                `<button class="btn btn-sm btn-warning" onclick="stopSchedule('${schedule.id}')" style="font-size: 11px; padding: 4px 8px;">⏸ Pausar</button>` :
+                `<button class="btn btn-sm btn-success" onclick="startSchedule('${schedule.id}')" style="font-size: 11px; padding: 4px 8px;">▶ Iniciar</button>`
+            }
+                        <button class="btn btn-sm btn-secondary" onclick="editSchedule('${schedule.id}')" style="font-size: 11px; padding: 4px 8px;">
+                            ✏️ Editar
+                        </button>
+                        <button class="btn btn-sm" onclick="deleteSchedule('${schedule.id}')" style="font-size: 11px; padding: 4px 8px; background: #f44336; color: white;">
+                            🗑️ Eliminar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
 }
-
-// Agregar texto al console del scheduler
-function addScheduleConsoleText(text) {
-    const console = document.getElementById('schedule-console');
-    if (console) {
-        console.textContent += text;
-        console.scrollTop = console.scrollHeight;
-    }
-}
-
-// Actualizar información del servicio
-function updateServiceInfo(status) {
-    const infoElement = document.getElementById('service-info');
-    if (!infoElement || !status.serviceInfo) return;
-
-    const info = status.serviceInfo;
-    const uptime = Math.floor(info.uptime / 60);
-    const memory = Math.round(info.memoryUsage.heapUsed / 1024 / 1024);
-
-    infoElement.innerHTML = `
-        <strong>Información del Servicio:</strong><br>
-        PID: ${info.pid} | Uptime: ${uptime} min | Memoria: ${memory} MB<br>
-        Schedules: ${status.totalSchedules} total, ${status.activeSchedules} activos<br>
-        Proyecto: ${info.projectPath}
-    `;
-}
-
-// ======================== EVENT LISTENERS SCHEDULER ========================
-
-// Conectado al servicio
-ipcRenderer.on('scheduler-connected', () => {
-    schedulerConnected = true;
-    updateServiceStatus('ok', 'Conectado');
-    refreshSchedules();
-});
-
-// Desconectado del servicio  
-ipcRenderer.on('scheduler-disconnected', () => {
-    schedulerConnected = false;
-    updateServiceStatus('error', 'Desconectado');
-});
-
-// Ejecución iniciada
-ipcRenderer.on('scheduler-test-run-started', (event, data) => {
-    document.getElementById('schedule-monitor').classList.remove('hidden');
-    addScheduleConsoleText(`[${data.schedule.name}] Ejecución iniciada (${data.run.id})\n`);
-    refreshSchedules();
-});
-
-// Ejecución completada
-ipcRenderer.on('scheduler-test-run-completed', (event, data) => {
-    const status = data.run.success ? 'Completado' : 'Falló';
-    const summary = `${data.run.testsRun} tests, ${data.run.testsPassed} pasaron, ${data.run.testsFailed} fallaron`;
-    addScheduleConsoleText(`[${data.schedule.name}] ${status}: ${summary}\n`);
-    refreshSchedules();
-});
-
-// Output de ejecución
-ipcRenderer.on('scheduler-test-output', (event, data) => {
-    addScheduleConsoleText(data.output);
-});
-
-// Error de ejecución
-ipcRenderer.on('scheduler-test-error', (event, data) => {
-    addScheduleConsoleText(`ERROR: ${data.error}`);
-});
-
-// Estado actualizado
-ipcRenderer.on('scheduler-status-update', (event, data) => {
-    updateServiceInfo(data);
-});
-
-// Schedules actualizados
-ipcRenderer.on('scheduler-schedules-update', (event, data) => {
-    currentSchedules = data;
-    displaySchedules(data);
-});

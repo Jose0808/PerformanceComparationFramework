@@ -6,12 +6,6 @@ import { fileURLToPath } from 'url';
 import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
 
-// // Para compatibilidad con CommonJS en el contexto de Electron
-// const __filename = typeof window !== 'undefined' ? '' : 
-//   import.meta?.url ? fileURLToPath(import.meta.url) : __filename;
-// const __dirname = typeof window !== 'undefined' ? '' : 
-//   __filename ? path.dirname(__filename) : __dirname;
-
 interface SchedulerServiceConfig {
   projectPath: string;
   port: number;
