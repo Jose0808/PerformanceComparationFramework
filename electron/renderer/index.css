@@ -466,39 +466,6 @@ input {
     word-wrap: break-word;
 }
 
-/* Estado del servicio */
-.system-check {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 15px;
-    background: #f0f0f0;
-    border-radius: 6px;
-    margin: 5px 0;
-}
-
-.status-indicator {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    margin-right: 8px;
-}
-
-.status-ok {
-    background-color: #4caf50;
-    animation: pulse 2s infinite;
-}
-
-.status-error {
-    background-color: #f44336;
-}
-
-.status-loading {
-    background-color: #ff9800;
-    animation: pulse 1s infinite;
-}
-
 @keyframes pulse {
     0% { opacity: 1; }
     50% { opacity: 0.5; }
@@ -520,50 +487,11 @@ input {
     }
 }
 
-/* Mejoras visuales para el formulario */
-.two-column {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-}
 
 @media (max-width: 768px) {
     .two-column {
         grid-template-columns: 1fr;
     }
-}
-
-/* Estilos para mensajes de información */
-.success-message {
-    background-color: #d4edda;
-    border: 1px solid #c3e6cb;
-    color: #155724;
-    padding: 15px;
-    border-radius: 8px;
-    margin: 15px 0;
-}
-
-.warning-box {
-    background-color: #fff3cd;
-    border: 1px solid #ffeaa7;
-    color: #856404;
-    padding: 15px;
-    border-radius: 8px;
-    margin: 15px 0;
-}
-
-.error-message {
-    background-color: #f8d7da;
-    border: 1px solid #f5c6cb;
-    color: #721c24;
-    padding: 15px;
-    border-radius: 8px;
-    margin: 15px 0;
-}
-
-/* Animaciones para botones */
-.btn {
-    transition: all 0.2s ease;
 }
 
 .btn:hover:not(:disabled) {

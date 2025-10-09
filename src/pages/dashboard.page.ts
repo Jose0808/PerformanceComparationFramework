@@ -65,8 +65,7 @@ export class DashboardPage extends BasePage {
    * Select option left menu Map Site
    */
   async selectMenuMapSite(timer: TestTimer, menu: string, subMenu: string): Promise<void> {
-    const StartTime = Date.now();
-    console.log(`Starting select menu map site`);
+    console.log(`⏳ Seleccionar menu en Mapa de Sitio`);
 
     try {
       timer.startSubStep('Click menú: ' + menu);
@@ -76,7 +75,6 @@ export class DashboardPage extends BasePage {
       timer.startSubStep('Click en submenú: ' + subMenu);
       await frameSelector.getByRole(this.individual360View.role, { name: subMenu }).click();
       timer.endSubStep();
-
       console.log(`✅ Select menu map site completed successfully`);
     } catch (error) {
       console.error(`❌ Select Menu map site failed`, error);

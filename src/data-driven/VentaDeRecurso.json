@@ -1,0 +1,20 @@
+{
+  "filters": {
+    "serviceNo": "3155402783"
+  },
+  "SuscriptionRow": {
+    "PhoneNumber": "3150521383"
+  },
+  "resourceSelect": {
+    "reasonForSale": "Reno/Repo",
+    "lotType": "Nuevo",
+    "resource": {
+      "offerCategory": "Equipos",
+      "offerName" : "Iphone 8 LTE 256 GB",
+      "features" : {
+        "Color" : "Gris Espacial",
+        "Capacidad": "256GB"
+      }
+    }
+  }
+}

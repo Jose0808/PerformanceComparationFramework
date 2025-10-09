@@ -3,17 +3,17 @@ import { LoginPage } from '../pages/login.page';
 import { DashboardPage } from '../pages/dashboard.page';
 import { Individual360ViewPage } from '../pages/vista360Individual.page';
 import { BasicInfoPage } from '../pages/basicInfo.page';
-import { ChangeNumberPage } from '../pages/changeNumber.page';
 import { CheckoutPage } from '../pages/checkout.page';
-import { ICambioDeNumero } from '../data-driven/types/changeNumber.types';
-import CambioDeNumero from '../data-driven/CambioDeNumero.json';
+import Recarga from '../data-driven/Recarga.json';
 import { BaseTestHelper } from './base-test.helper';
 import { TestTimer } from '../utils/timer.utils';
 import { ExecutionCollector } from '../collectors/ExecutionCollector';
 import { HeaderPage } from '../pages/header.page';
 import { SessionCache } from '../utils/sessionCache.utils'
+import { RechargePage } from '../pages/recharge';
+import { IRecharge } from '../data-driven/types/recharge.types';
 
-class CambioNumeroTest extends BaseTestHelper {
+class RecargaTest extends BaseTestHelper {
   public pages: any = {};
 
   setupPages(page: any) {
@@ -23,14 +23,14 @@ class CambioNumeroTest extends BaseTestHelper {
       dashboard: new DashboardPage(page),
       vista360: new Individual360ViewPage(page),
       basicInfo: new BasicInfoPage(page),
-      changeNumber: new ChangeNumberPage(page),
+      recharge: new RechargePage(page),
       checkout: new CheckoutPage(page)
     };
   }
 
-  async executeFlow(app: any, timer: any, testData: ICambioDeNumero) {
+  async executeFlow(app: any, timer: any, testData: IRecharge) {
 
-    await this.pages.login.login(app, timer);
+    await this.pages.login.login(app, timer, this.pages.dashboard);
 
     await this.pages.dashboard.selectOnDashboard(
       app,
@@ -40,40 +40,38 @@ class CambioNumeroTest extends BaseTestHelper {
     );
 
     await this.pages.vista360.searchCustomer(app, timer, testData.filters);
-    // await this.pages.basicInfo.selectSuscription(
-    //   app,
-    //   timer,
-    //   testData.SuscriptionRow,
-    //   "Cambio de número"
-    // );
-    // await this.pages.changeNumber.changeNumber(app, timer);
-    // await this.pages.checkout.checkoutValidate(app, timer);
+    await this.pages.basicInfo.selectSuscription(
+      app,
+      timer,
+      testData.SuscriptionRow,
+      "Recargas"
+    );
+    await this.pages.recharge.Recharge(app, timer, testData.rechargeAmount);
+    await this.pages.checkout.checkoutValidate(app, timer);
   }
 }
 
 // Variables globales para el collector
 let collector: ExecutionCollector;
 let sessionId: string;
-const flowName = 'Cambio de Número';
-const flowNameReplace = flowName.replace(/\s+/g, '');
+const flowName = 'Recarga';
 
 test.describe(flowName + ' Performance Tests', () => {
-  const testHelper = new CambioNumeroTest();
+  const testHelper = new RecargaTest();
 
   test.beforeAll(async () => {
     testHelper.logConfiguration();
 
     collector = ExecutionCollector.getInstance('./performance-data');
     sessionId = collector.startSession(
-      `${flowNameReplace}-Performance-${new Date().toISOString().split('T')[0]}`
+      `${flowName}-Performance-${new Date().toISOString().split('T')[0]}`
     );
     console.log(`🔧 Sesión iniciada: ${sessionId}`);
   });
 
   for (const app of testHelper.config.getAllApps()) {
     test.describe(`${app.name}`, () => {
-      test.describe.configure({ mode: 'parallel' });
-
+      // test.describe.configure({ mode: 'parallel' });
       let sharedContext: BrowserContext;
       let sharedPage: Page;
 
@@ -94,7 +92,7 @@ test.describe(flowName + ' Performance Tests', () => {
           testHelper.setupPages(sharedPage);
 
           const timer = new TestTimer(sharedPage);
-          const testData = CambioDeNumero as ICambioDeNumero;
+          const testData = Recarga as IRecharge;
 
           let metrics: any;
           let testError: string | undefined;

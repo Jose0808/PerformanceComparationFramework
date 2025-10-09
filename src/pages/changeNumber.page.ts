@@ -1,19 +1,13 @@
 import { Page, Locator, FrameLocator, expect } from '@playwright/test';
 import { BasePage } from './base.page';
 import { AppConfig } from '../types/config.types';
-import { ICambioDeNumero } from '../types/cambioDeNumero';
 import { FrameOptionsByRole } from '../types/frameOptions';
 import { TestTimer } from '../utils/timer.utils';
 
 
-export class ChangeNumber extends BasePage {
+export class ChangeNumberPage extends BasePage {
 
     private readonly currentFrame = "div:nth-child(5) > iframe";
-
-    private readonly suscriptions = "Suscripciones";
-    private readonly suscriptionsWait = "Información de la Suscripción";
-
-    private readonly rowSuscription: FrameOptionsByRole = { role: "row", options: { name: "Vista 360° Individual" } };;
 
     constructor(page: Page) {
         super(page);

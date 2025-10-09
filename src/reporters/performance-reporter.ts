@@ -1,12 +1,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { FullResult, Reporter } from '@playwright/test/reporter';
-// import { ReportFactory } from '../factories/report-factory';
 import { ConsoleReporter } from './console-reporter';
-// import { DataValidator } from '../validators/data-validator';
-import { FileManager } from '../utils/file-manager.utils';
 import { DateFormatter } from '../utils/date-formatter.utils';
-// import { ReportConfigManager } from '../config/report-config';
 import { TestExecution } from '../types/timer.types';
 import { ReportGenerator } from './report-generator';
 import { ConfigManager } from '../config/ConfigManager';

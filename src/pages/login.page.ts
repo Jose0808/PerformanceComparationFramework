@@ -52,7 +52,7 @@ export class LoginPage extends BasePage {
         timer.endStep();
         console.log(`✅ Inicio de sesión completado exitosamente para ${appConfig.name}`);
       } catch (error) {
-        throw new Error(`❌ Inicio de sesión fallido para ${appConfig.name} - Error: ${error}`);
+        throw new Error(`❌ Inicio de sesión fallido - Error: ${error}`);
       }
     }
   }

@@ -369,7 +369,10 @@ export abstract class BasePage {
    * Wait for page to load completely with multiple strategies
    */
   async waitFoLoad(): Promise<void> {
+    console.log(`⏳ Esperando cargue de la pagina`);
     await this.page.waitForLoadState('domcontentloaded', { timeout: this.config.test.timeout });
+      console.log(`✅ Pagina cargada completamente`);
+
   }
 
 

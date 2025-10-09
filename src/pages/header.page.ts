@@ -3,7 +3,6 @@
 import { Page, Locator } from '@playwright/test';
 import { BasePage } from './base.page';
 import { AppConfig } from '../types/config.types';
-import { TestTimer } from '../utils/timer.utils';
 
 export class HeaderPage extends BasePage {
   private readonly singOutDropList = '.ao-droplist';
@@ -14,13 +13,10 @@ export class HeaderPage extends BasePage {
   }
 
   /**
-   * Complete login flow with performance tracking
+   * Complete 
    */
   async logout(appConfig: AppConfig): Promise<void> {
-
-    // PASO 1: LOGIN
     console.log(`⏳ Iniciando flujo cerrar sesión ${appConfig.name}`);
-
     try {
       await this.clickElement(this.singOutDropList);
       await this.clickElement(this.disconnectButton);      

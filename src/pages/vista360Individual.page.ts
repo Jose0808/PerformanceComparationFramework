@@ -1,17 +1,16 @@
 import { Page, Locator } from '@playwright/test';
 import { BasePage } from './base.page';
 import { AppConfig } from '../types/config.types';
-import { ICambioDeNumero } from '../types/cambioDeNumero';
 import { TestTimer } from '../utils/timer.utils';
+import { Individual360View } from '../data-driven/types/searchClient.types';
 
 
-export class Vista360IndividualPage extends BasePage {
+export class Individual360ViewPage extends BasePage {
 
     private readonly currentFrame = "div:nth-child(4) > iframe";
     private readonly searchCustomerText = "Búsqueda de clientes";
-    // private readonly serviceNo: FrameOptions = { frame: this.currentFrame, selector: "#serviceNO" };
     private readonly serviceNo = "#serviceNO";
-    private readonly idNumber = "#idNumber" //{ frame: this.currentFrame, selector: "#idNumber" };
+    private readonly idNumber = "#idNumber"
     private readonly accountCode = "#accountCode";
     private readonly idType = "#ocTriggeridTypeDroplistSelectudrop00001";
     private readonly Historic = "#isShowHis > ins";
@@ -25,7 +24,7 @@ export class Vista360IndividualPage extends BasePage {
     /**
      * Busqueda de clientes
      */
-    async searchCustomer(appConfig: AppConfig, timer: TestTimer, filters: ICambioDeNumero["filters"]): Promise<void> {
+    async searchCustomer(appConfig: AppConfig, timer: TestTimer, filters: Individual360View): Promise<void> {
         console.log(`Starting search customer`);
 
         try {

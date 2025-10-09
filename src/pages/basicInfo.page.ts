@@ -1,11 +1,12 @@
 import { Page, Locator, FrameLocator } from '@playwright/test';
 import { BasePage } from './base.page';
 import { AppConfig } from '../types/config.types';
-import { ICambioDeNumero } from '../types/cambioDeNumero';
+import { ICambioDeNumero } from '../data-driven/types/changeNumber.types';
 import { TestTimer } from '../utils/timer.utils';
+import { ClientPanel } from '../data-driven/types/searchClient.types';
 
 
-export class BasicInfo extends BasePage {
+export class BasicInfoPage extends BasePage {
 
     // Generic selectors that should work for most login forms
     private readonly currentFrame = "div:nth-child(4) > iframe";
@@ -19,7 +20,7 @@ export class BasicInfo extends BasePage {
     /**
      * Busqueda de clientes
      */
-    async selectSuscription(appConfig: AppConfig, timer: TestTimer, suscriptionRow: ICambioDeNumero["SuscriptionRow"], menuSuscription: string): Promise<void> {
+    async selectSuscription(appConfig: AppConfig, timer: TestTimer, suscriptionRow: ClientPanel, menuSuscription: string): Promise<void> {
         console.log(`Starting select suscription`);
         try {
             timer.startStep(appConfig.name, 'Informacion Básica');

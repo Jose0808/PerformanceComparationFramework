@@ -1,13 +1,12 @@
 import { Page } from '@playwright/test';
 import { BasePage } from './base.page';
-import { FrameOptionsByRole } from '../types/frameOptions';
 import { AppConfig } from '../types/config.types';
 import { TestTimer } from '../utils/timer.utils';
 
 
-export class Checkout extends BasePage {
+export class CheckoutPage extends BasePage {
 
-    private readonly currentFrame = "div:nth-child(5) > iframe";
+    private readonly currentFrame = "iframe";
 
     constructor(page: Page) {
         super(page);
@@ -22,7 +21,7 @@ export class Checkout extends BasePage {
             timer.startStep(appConfig.name, 'Checkout');
             timer.startSubStep('Espera cargue pantalla: Checkout detalle de pago');
 
-            const frameSelector = await this.page.locator(this.currentFrame).contentFrame();
+            const frameSelector = await this.page.locator(this.currentFrame).last().contentFrame();
 
             await frameSelector.locator("#checkoutPaymentContentDetail").waitFor({
                 state: 'visible',

@@ -3,17 +3,17 @@ import { LoginPage } from '../pages/login.page';
 import { DashboardPage } from '../pages/dashboard.page';
 import { Individual360ViewPage } from '../pages/vista360Individual.page';
 import { BasicInfoPage } from '../pages/basicInfo.page';
-import { ChangeNumberPage } from '../pages/changeNumber.page';
+import { ResourceSalePage } from '../pages/resourceSale.page';
 import { CheckoutPage } from '../pages/checkout.page';
-import { ICambioDeNumero } from '../data-driven/types/changeNumber.types';
-import CambioDeNumero from '../data-driven/CambioDeNumero.json';
+import { IResourceSale } from '../data-driven/types/resourceSale.types';
+import VentaDeRecurso from '../data-driven/VentaDeRecurso.json';
 import { BaseTestHelper } from './base-test.helper';
 import { TestTimer } from '../utils/timer.utils';
 import { ExecutionCollector } from '../collectors/ExecutionCollector';
 import { HeaderPage } from '../pages/header.page';
 import { SessionCache } from '../utils/sessionCache.utils'
 
-class CambioNumeroTest extends BaseTestHelper {
+class VentaRecursoTest extends BaseTestHelper {
   public pages: any = {};
 
   setupPages(page: any) {
@@ -23,14 +23,14 @@ class CambioNumeroTest extends BaseTestHelper {
       dashboard: new DashboardPage(page),
       vista360: new Individual360ViewPage(page),
       basicInfo: new BasicInfoPage(page),
-      changeNumber: new ChangeNumberPage(page),
+      resourceSale: new ResourceSalePage(page),
       checkout: new CheckoutPage(page)
     };
   }
 
-  async executeFlow(app: any, timer: any, testData: ICambioDeNumero) {
+  async executeFlow(app: any, timer: any, testData: IResourceSale) {
 
-    await this.pages.login.login(app, timer);
+    await this.pages.login.login(app, timer, this.pages.dashboard);
 
     await this.pages.dashboard.selectOnDashboard(
       app,
@@ -40,13 +40,13 @@ class CambioNumeroTest extends BaseTestHelper {
     );
 
     await this.pages.vista360.searchCustomer(app, timer, testData.filters);
-    // await this.pages.basicInfo.selectSuscription(
-    //   app,
-    //   timer,
-    //   testData.SuscriptionRow,
-    //   "Cambio de número"
-    // );
-    // await this.pages.changeNumber.changeNumber(app, timer);
+    await this.pages.basicInfo.selectSuscription(
+      app,
+      timer,
+      testData.SuscriptionRow,
+      "Venta de recurso"
+    );
+    await this.pages.resourceSale.ventaRecurso(app, timer, testData.resourceSelect);
     // await this.pages.checkout.checkoutValidate(app, timer);
   }
 }
@@ -54,11 +54,11 @@ class CambioNumeroTest extends BaseTestHelper {
 // Variables globales para el collector
 let collector: ExecutionCollector;
 let sessionId: string;
-const flowName = 'Cambio de Número';
+const flowName = 'Venta de Recurso';
 const flowNameReplace = flowName.replace(/\s+/g, '');
 
 test.describe(flowName + ' Performance Tests', () => {
-  const testHelper = new CambioNumeroTest();
+  const testHelper = new VentaRecursoTest();
 
   test.beforeAll(async () => {
     testHelper.logConfiguration();
@@ -72,8 +72,7 @@ test.describe(flowName + ' Performance Tests', () => {
 
   for (const app of testHelper.config.getAllApps()) {
     test.describe(`${app.name}`, () => {
-      test.describe.configure({ mode: 'parallel' });
-
+      // test.describe.configure({ mode: 'parallel' });
       let sharedContext: BrowserContext;
       let sharedPage: Page;
 
@@ -94,7 +93,7 @@ test.describe(flowName + ' Performance Tests', () => {
           testHelper.setupPages(sharedPage);
 
           const timer = new TestTimer(sharedPage);
-          const testData = CambioDeNumero as ICambioDeNumero;
+          const testData = VentaDeRecurso as IResourceSale;
 
           let metrics: any;
           let testError: string | undefined;

@@ -72,6 +72,40 @@ export class ComparisonService {
             }
         });
 
+        const result = Array.from(urlComparisons.values()).sort((a, b) => {
+            if (a.onpremise && b.onpremise) {
+                // Ambos tienen onpremise → ordena por order
+                return a.onpremise.order - b.onpremise.order;
+            }
+            if (a.onpremise && !b.onpremise) {
+                // a tiene onpremise, b no → a primero
+                return -1;
+            }
+            if (!a.onpremise && b.onpremise) {
+                // b tiene onpremise, a no → b primero
+                return 1;
+            }
+            // Ninguno tiene onpremise → se quedan igual
+            return 0;
+        });
+        
+        const result2 = Array.from(urlComparisons.values()).sort((a, b) => {
+            if (a.cloud && b.cloud) {
+                // Ambos tienen onpremise → ordena por order
+                return a.cloud.order - b.cloud.order;
+            }
+            if (a.cloud && !b.cloud) {
+                // a tiene onpremise, b no → a primero
+                return -1;
+            }
+            if (!a.cloud && b.cloud) {
+                // b tiene onpremise, a no → b primero
+                return 1;
+            }
+            // Ninguno tiene onpremise → se quedan igual
+            return 0;
+        });
+
         return Array.from(urlComparisons.values());
     }
 }

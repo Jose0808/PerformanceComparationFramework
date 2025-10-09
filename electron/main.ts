@@ -1,11 +1,7 @@
-import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
-import { ChildProcess, spawn } from 'child_process';
+import { app, BrowserWindow, ipcMain, shell } from 'electron';
+import { spawn } from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
-import * as os from 'os';
-import { config } from 'process';
-import { TestScheduler } from '../src/scheduler/TestScheduler';
-import { CommandOptions, CommandResult, ProjectPaths } from './types';
 import { executeCommand, getProjectPaths, runPlaywright } from './commands';
 import { SchedulerClient } from '../src/scheduler/SchedulerClient';
 
@@ -284,7 +280,8 @@ ipcMain.handle('save-env-file', async (event: any, envVariables: any): Promise<a
     envContent += '# Generado automáticamente\n\n';
 
     Object.entries(envVariables).forEach(([key, value]) => {
-      envContent += `${key}=${value}\n`;
+      let setvalue = String(value).includes("#") ? `"${value}"` : value;
+      envContent += `${key}=${setvalue}\n`;
     });
 
     fs.writeFileSync(paths.envFile, envContent, 'utf8');

@@ -13,6 +13,7 @@ export class TestTimer extends MetricsCollector {
   }
 
   startStep(appName: string, stepName: string): void {
+    console.log('⏳ Inicio paso: ' + stepName);
     // Finalizar paso anterior si existe
     if (this.currentStep) {
       this.endStep();
@@ -29,6 +30,8 @@ export class TestTimer extends MetricsCollector {
   }
 
   startSubStep(subStepName: string): void {
+    console.log('⏳ Inicio sub-paso: ' + subStepName);
+
     if (!this.currentStep) {
       throw new Error('No hay un paso activo. Inicia un paso primero.');
     }
