@@ -82,7 +82,7 @@ function updateTest(tests) {
     if (element && tests) {
         let checks = "";
         tests.forEach(test => {
-            checks += `<label><input name="tests" type="checkbox" value="${test}" checked>${test.replace(".spec.ts", "")}</label>`;
+            checks += `<label><input name="tests" type="checkbox" value="${test}" checked>${test.replace(process.env.ENVIROMENT !== 'pro' ? ".spec.ts" : ".spec.js", "")}</label>`;
         });
         element.innerHTML = checks;
     }
@@ -823,7 +823,7 @@ function populateTestSelector(selectedTests = []) {
                        ${isChecked ? 'checked' : ''}
                        onchange="updateSelectAllCheckbox()"
                        style="margin-right: 8px;">
-                <span style="font-size: 13px;">${test.name.replace('.spec.ts', '')}</span>
+                <span style="font-size: 13px;">${test.name.replace(process.env.ENVIROMENT !== 'pro' ? ".spec.ts" : ".spec.js", '')}</span>
             </label>
         `;
     });
@@ -1096,7 +1096,7 @@ function displaySchedules(schedules) {
                         ${schedule.testFiles && schedule.testFiles.length > 0 ? `
                             <div style="margin-top: 8px; padding: 8px; background: #f8f9fa; border-radius: 4px; font-size: 11px;">
                                 <strong>Tests seleccionados:</strong><br>
-                                ${schedule.testFiles.map(test => `• ${test.replace('.spec.ts', '')}`).join('<br>')}
+                                ${schedule.testFiles.map(test => `• ${test.replace(process.env.ENVIROMENT !== 'pro' ? ".spec.ts" : ".spec.js", '')}`).join('<br>')}
                             </div>
                         ` : ''}
                     </div>

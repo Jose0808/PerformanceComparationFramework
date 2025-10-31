@@ -3,7 +3,8 @@
     "name": "Diario 15",
     "cronExpression": "*/15 * * * *",
     "testFiles": [
-      "CambioDeNumero.spec.ts"
+      "CambioDeNumero.spec.ts",
+      "Recarga.spec.ts"
     ],
     "enabled": false,
     "id": "schedule_1759248613515_fsmm0jytf",
@@ -337,8 +338,27 @@
         "testsFailed": 0,
         "endTime": "2025-09-30T18:31:30.814Z",
         "output": ""
+      },
+      {
+        "id": "run_1760719255681",
+        "startTime": "2025-10-17T16:40:55.681Z",
+        "success": false,
+        "testsRun": 0,
+        "testsPassed": 0,
+        "testsFailed": 0
+      },
+      {
+        "id": "run_1760719502187",
+        "startTime": "2025-10-17T16:45:02.187Z",
+        "success": false,
+        "testsRun": 0,
+        "testsPassed": 0,
+        "testsFailed": 0,
+        "endTime": "2025-10-17T16:51:08.863Z",
+        "output": ""
       }
     ],
-    "lastRun": "2025-09-30T18:30:00.090Z"
+    "lastRun": "2025-10-17T16:45:02.187Z",
+    "nextRun": "2025-10-17T17:45:02.205Z"
   }
 ]

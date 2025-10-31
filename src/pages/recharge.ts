@@ -21,10 +21,14 @@ export class RechargePage extends BasePage {
             timer.startStep(appConfig.name, 'Recarga');
             timer.startSubStep('Espera cargue pantalla: Recarga');
             const frameSelector = await this.page.locator(this.currentFrame).contentFrame();
-            await frameSelector.locator("#servicenum").waitFor({
-                state: 'visible',
-                timeout: this.config.test.timeout
-            });
+            const inputServiceNum = await frameSelector.locator("#servicenum")
+            await Promise.all([
+                inputServiceNum.waitFor({
+                    state: 'visible',
+                    timeout: this.config.test.timeout
+                }),
+                expect(inputServiceNum).not.toBeEmpty(),
+            ]);
             timer.endSubStep();
 
             timer.startSubStep('Busqueda de MSISDN');
@@ -38,10 +42,13 @@ export class RechargePage extends BasePage {
             ]);
             timer.endSubStep();
 
+            timer.startSubStep('Digitar datos');
             await this.fillInput("#rechargeamount", rechargeAmount, frameSelector);
             await this.clickElement("#btn_openAccBuy", undefined, frameSelector);
 
             await this.clickElement("#winmsg0 .msgbox-ok-text", undefined, frameSelector);
+
+            timer.endSubStep();
 
             timer.endStep();
             console.log(`✅ Recarga finalizado exitosamente`);

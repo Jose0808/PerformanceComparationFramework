@@ -385,9 +385,9 @@ exports.SchedulerService = SchedulerService;
 async function runStandaloneScheduler(projectPath) {
     const workingDir = projectPath || process.cwd();
     // Verificar que estamos en un proyecto Playwright válido
-    const configPath = path.join(workingDir, 'playwright.config.ts');
+    const configPath = path.join(workingDir, process.env.ENVIROMENT !== 'pro' ? 'playwright.config.ts' : 'playwright.config.js');
     if (!fs.existsSync(configPath)) {
-        console.error(`Error: No se encontró playwright.config.ts en ${workingDir}`);
+        console.error(`Error: No se encontró playwright.config.js en ${workingDir}`);
         console.error('Asegúrese de estar en la raíz del proyecto Playwright');
         process.exit(1);
     }

@@ -102,13 +102,6 @@ test.describe(flowName + ' Performance Tests', () => {
           try {
             await testHelper.executeFlow(app, timer, testData);
 
-            await testHelper.takeScreenshotIfEnabled(
-              testHelper.pages.login,
-              app.name,
-              iteration,
-              flowName
-            );
-
           } catch (error) {
             testError = testHelper.handleTestError(error, app.name, iteration, flowName);
             throw error;

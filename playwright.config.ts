@@ -23,10 +23,10 @@ const {
   // Test Execution Strategy
   WORKER_COUNT = '1',
   RUN_PARALLEL = 'true',
-  ITERATION_COUNT = '5',
-  RETRY_COUNT = '2',
+  ITERATION_COUNT = '1',
+  RETRY_COUNT = '1',
   CONTINUE_ON_FAILURE = 'true',
-  MAX_CONSECUTIVE_FAILURES = '3',
+  MAX_CONSECUTIVE_FAILURES = '1',
 
   // Timeouts
   LOAD_TIMEOUT = '15000',
@@ -96,8 +96,11 @@ if (REPORT_FORMAT.includes('junit')) {
   }]);
 }
 
+
+const isDev = ENVIRONMENT !== 'pro';
+
 // Add custom performance reporter
-reporters.push(['./src/reporters/performance-reporter.ts']);
+reporters.push([isDev ? './src/reporters/performance-reporter.ts' : './src/reporters/performance-reporter.js']);
 
 export default defineConfig({
   testDir: resolvePlaywrightResource('src/tests'),
@@ -119,8 +122,8 @@ export default defineConfig({
   maxFailures: maxConsecutiveFailures,
 
   /* Global test setup */
-  globalSetup: './src/setup/GlobalSetup.ts',
-  globalTeardown: './src/setup/GlobalTeardown.ts',
+  globalSetup: isDev ? './src/setup/GlobalSetup.ts' : './src/setup/GlobalSetup.js',
+  globalTeardown: isDev ? './src/setup/GlobalTeardown.ts' : './src/setup/GlobalTeardown.js',
 
   /* Shared settings for all projects */
   use: {

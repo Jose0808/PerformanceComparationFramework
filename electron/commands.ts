@@ -119,7 +119,7 @@ export function getProjectPaths(): ProjectPaths {
         testsDir: path.join(basePath, 'src', 'tests'),
         dataDir: path.join(basePath, 'src', 'data-driven'),
         envFile: path.join(basePath, '.env'),
-        configFile: path.join(basePath, 'playwright.config.ts'),
+        configFile: path.join(basePath, process.env.ENVIROMENT !== 'pro' ? 'playwright.config.ts': 'playwright.config.js'),
         nodeModules: path.join(basePath, 'node_modules'),
         packageJson: path.join(basePath, 'package.json'),
         reportsDir: path.join(basePath, 'reports')

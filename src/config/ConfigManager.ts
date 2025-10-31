@@ -2,7 +2,7 @@ import { AppConfig, TestConfig, ReportingConfig } from "../types/config.types";
 
 export class ConfigManager {
   private static instance: ConfigManager;
-  
+
   public readonly app1: AppConfig;
   public readonly app2: AppConfig;
   public readonly test: TestConfig;
@@ -81,7 +81,8 @@ export class ConfigManager {
   }
 
   public getAllApps(): AppConfig[] {
-    return [this.app1, this.app2];
+    return [this.app2];
+    // return [this.app1, this.app2];
   }
 
 

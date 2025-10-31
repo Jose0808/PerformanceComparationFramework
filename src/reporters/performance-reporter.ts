@@ -32,9 +32,7 @@ export default class PerformanceReporter implements Reporter {
     console.log('📂 Reading performance data from directory...');
 
     try {
-      // Wait for files to be written
       await this.waitForFileWriteCompletion();
-
       const performanceData = this.readAllPerformanceFiles();
 
       if (performanceData.length === 0) {
@@ -44,12 +42,16 @@ export default class PerformanceReporter implements Reporter {
 
       console.log(`📊 Total runs found: ${performanceData.length}`);
 
-      const groupedData = this.groupDataByApplication(performanceData);
-      await this.generateReports(groupedData);
+      const groupedDataFlow = this.groupDataByFlow(performanceData);
+      await Promise.all(
+        Object.entries(groupedDataFlow).map(async ([flowName, runs]) => {
+          const groupedData = this.groupDataByApplication(runs);
+          await this.generateReports(groupedData);
+        })
+      );
 
     } catch (error: any) {
       console.error('❌ Error generating report from files:', error);
-      console.error('Stack:', error.stack);
     } finally {
       await this.cleanupOldFiles();
     }
@@ -150,6 +152,33 @@ export default class PerformanceReporter implements Reporter {
     return grouped;
   }
 
+
+  private groupDataByFlow(performanceData: PerformanceRun[]): GroupedData {
+    const grouped: GroupedData = {};
+
+    performanceData.forEach((run, index) => {
+      console.log(`🔍 Processing run ${index + 1}:`, {
+        appName: run.appName,
+        flowName: run.flowName,
+        iteration: run.iterationNumber,
+        hasExecution: !!run.execution
+      });
+
+      if (!this.isValidRun(run)) {
+        console.log(`⚠️ Run ${index + 1} invalid - missing flowName or execution`);
+        return;
+      }
+
+      if (!grouped[run.flowName]) {
+        grouped[run.flowName] = [];
+      }
+      grouped[run.flowName].push(run);
+    });
+
+    this.logGroupedData(grouped);
+    return grouped;
+  }
+
   private logGroupedData(grouped: GroupedData): void {
     console.log('📊 Data grouped by application:');
     Object.entries(grouped).forEach(([appName, runs]) => {
@@ -169,9 +198,6 @@ export default class PerformanceReporter implements Reporter {
     }
 
     await ConsoleReporter.generate(comparison);
-
-
-    // Generate HTML report
     await this.generateHTMLReport(comparison);
   }
 
@@ -183,19 +209,49 @@ export default class PerformanceReporter implements Reporter {
     console.log(`   OnPremise: ${onPremiseRuns ? onPremiseRuns.length : 0} runs`);
     console.log(`   Cloud: ${cloudRuns ? cloudRuns.length : 0} runs`);
 
-    if (!onPremiseRuns || !cloudRuns) {
-      return this.handleSingleEnvironmentReport(onPremiseRuns || cloudRuns);
+    // Si hay datos de ambos ambientes, generar comparación
+    if (onPremiseRuns && cloudRuns) {
+      return this.generateComparisonReport(onPremiseRuns, cloudRuns);
     }
 
-    return this.generateComparisonReport(onPremiseRuns, cloudRuns);
+    // Si solo hay datos de un ambiente, generar reporte individual
+    if (cloudRuns && cloudRuns.length > 0) {
+      return this.generateSingleEnvironmentReport(cloudRuns, 'Cloud');
+    }
+
+    if (onPremiseRuns && onPremiseRuns.length > 0) {
+      return this.generateSingleEnvironmentReport(onPremiseRuns, 'OnPremise');
+    }
+
+    console.log('⚠️ No data found for any application');
+    return null;
   }
 
-  private handleSingleEnvironmentReport(availableRuns: PerformanceRun[] | undefined): any | null {
-    if (!availableRuns || availableRuns.length === 0) {
-      console.log('⚠️ No data found for any application');
+  private generateSingleEnvironmentReport(runs: PerformanceRun[], environmentName: string): any {
+    const bestRun = this.selectBestRun(runs);
+
+    console.log(`🔄 Generating single environment report for ${environmentName}:`);
+    console.log(`   Best Run: Iteration ${bestRun.iterationNumber || 'N/A'}`);
+
+    if (!bestRun.execution) {
+      console.error('❌ Missing execution in best run');
       return null;
     }
-}
+
+    // Crear un execution vacío para el ambiente faltante
+    const emptyExecution = this.createEmptyExecution(
+      environmentName === 'Cloud' ? 'OnPremise' : 'Cloud'
+    );
+
+    // Generar comparación con el ambiente vacío
+    const generator = new ReportGenerator();
+
+    if (environmentName === 'Cloud') {
+      return generator.generateComparison(emptyExecution, bestRun.execution);
+    } else {
+      return generator.generateComparison(bestRun.execution, emptyExecution);
+    }
+  }
 
   private generateComparisonReport(onPremiseRuns: PerformanceRun[], cloudRuns: PerformanceRun[]): any {
     const bestOnPremise = this.selectBestRun(onPremiseRuns);
@@ -235,11 +291,10 @@ export default class PerformanceReporter implements Reporter {
     return bestRun;
   }
 
-
-  private createEmptyExecution(): TestExecution {
+  private createEmptyExecution(environmentName: string): TestExecution {
     return {
-      environment: "pre",
-      testName: 'No Data',
+      environment: environmentName.toLowerCase() === 'cloud' ? 'cloud' : 'pre',
+      testName: "",
       totalDuration: 0,
       steps: [],
       timestamp: new Date()
@@ -261,7 +316,6 @@ export default class PerformanceReporter implements Reporter {
       const generator = new ReportGenerator();
       await generator.generateHTMLReport(comparison, reportConfig);
 
-
       console.log(`✅ Report generated successfully: ${fullPath}`);
 
     } catch (error) {
@@ -274,35 +328,16 @@ export default class PerformanceReporter implements Reporter {
       if (!fs.existsSync(this.performanceDataDir)) {
         return;
       }
-
-      const files = fs.readdirSync(this.performanceDataDir);
-      let cleanedCount = 0;
-
-      for (const file of files) {
-        const filePath = path.join(this.performanceDataDir, file);
-
-        fs.unlinkSync(filePath);
-        cleanedCount++;
-
-      }
-
-      if (cleanedCount > 0) {
-        console.log(`🗑️ ${cleanedCount} old files cleaned up`);
-      }
-
+      await fs.rm(this.performanceDataDir, { recursive: true, force: true }, (err) => {
+        if (err) {
+          console.error('Error al eliminar el directorio:', err);
+          return;
+        }
+        console.log('Directorio eliminado correctamente.');
+      });
     } catch (error: any) {
       console.log('⚠️ Error cleaning up old files:', error.message);
     }
   }
 
-  private shouldCleanupFile(filePath: string): boolean {
-    try {
-      const stats = fs.statSync(filePath);
-      // Clean up files older than 1 day (optional logic)
-      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-      return stats.mtime < oneDayAgo;
-    } catch {
-      return true; // If we can't read stats, clean it up
-    }
-  }
 }

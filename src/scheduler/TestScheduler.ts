@@ -9,7 +9,7 @@ export interface ScheduleConfig {
   id: string;
   name: string;
   cronExpression: string;
-  testPattern?: string; // patrón para filtrar tests específicos
+  testFiles?: string[];
   enabled: boolean;
   lastRun?: Date;
   nextRun?: Date;
@@ -205,11 +205,10 @@ export class TestScheduler extends EventEmitter {
     try {
       const args: string[] = ['test'];
 
+      schedule.testFiles?.forEach((test) => {
+        args.push(test);
+      });
 
-      // Agregar patrón de test si está especificado
-      if (schedule.testPattern) {
-        args.push(schedule.testPattern);
-      }
       console.log(`Executing scheduled test: ${args.join(' ')}`);
 
       // Ejecutar usando commands.ts

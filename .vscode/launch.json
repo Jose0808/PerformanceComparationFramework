@@ -1,6 +1,6 @@
 {
   "version": "0.2.0",
-  "configurations": [
+  "configurations": [    
     {
       "name": "Debug Main Process",
       "type": "node",
@@ -13,7 +13,7 @@
       "args" : ["./electron/main.js"],
       "outputCapture": "std"
     }
-  ]
+  ] 
 }
 
 // {

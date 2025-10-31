@@ -4,5 +4,12 @@
     "idType": "Cédula de Ciudadania",
     "idNumber": "9988776657",
     "idExpiredDate": "30/01/1921"
+  },
+  "deviceType": "Traido",
+  "IMEI": "861296060082999",
+  "resource": {
+    "simCard": "MULTI SIMCARD POSPA LTE 128K 2FF/3FF/4FF",
+    "lotDeviceType": "Nuevo",
+    "lotSimCardType": "Nuevo"
   }
 }

@@ -86,7 +86,7 @@ function parseArgs() {
 
 // Verificar si el proyecto es válido
 function validateProject(projectPath) {
-    const playwrightConfig = path.join(projectPath, 'playwright.config.ts');
+    const playwrightConfig = path.join(projectPath, process.env.ENVIROMENT !== 'pro' ? 'playwright.config.ts' : 'playwright.config.js');
     // const packageJson = path.join(projectPath, 'package.json');
 
     if (!fs.existsSync(playwrightConfig)) {

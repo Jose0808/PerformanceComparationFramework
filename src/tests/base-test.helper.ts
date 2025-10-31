@@ -12,13 +12,6 @@ export class BaseTestHelper {
     console.log(`🚀 ${appName} - ${flowName} - Ejecución ${iteration}`);
   }
 
-  async takeScreenshotIfEnabled(page: any, appName: string, iteration: number, flowName: string) {
-    if (this.config.reporting.generateScreenshots) {
-      const filename = `success_${appName.replace(/\s+/g, '_')}_${flowName}_run_${iteration}`;
-      await page.takeScreenshot(filename);
-    }
-  }
-
   handleTestError(error: unknown, appName: string, iteration: number, flowName: string): string {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error(`❌ ${appName} - ${flowName} - Run ${iteration} failed:`, errorMessage);

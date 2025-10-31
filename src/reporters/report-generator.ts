@@ -6,12 +6,17 @@ import { ComparisonService } from "../utils/comparison.utils";
 import { DateFormatter } from "../utils/date-formatter.utils";
 import { FileManager } from "../utils/file-manager.utils";
 import { ReportingConfig } from "../types/config.types";
+import { ConfigManager } from "../config/ConfigManager";
 
 export class ReportGenerator {
     private htmlRenderer: HTMLRenderer;
+    protected readonly config: ConfigManager;
+
 
     constructor() {
         this.htmlRenderer = new HTMLRenderer();
+        this.config = ConfigManager.getInstance();
+
     }
 
     async generateComparison(onpremise: TestExecution, cloud: TestExecution): Promise<ComparisonReport> {
@@ -21,7 +26,7 @@ export class ReportGenerator {
     async generateHTMLReport(
         comparison: ComparisonReport,
         config: any = {
-            outputPath: './reports'
+            outputPath: this.config.reporting.outputPath
         }
     ): Promise<void> {
         try {

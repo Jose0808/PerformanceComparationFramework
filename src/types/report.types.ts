@@ -26,6 +26,7 @@ export interface NetworkComparison {
     url: string;
     urlName: string;
     method: string;
+    order: number;
     onpremise: NetworkLog | null;
     cloud: NetworkLog | null;
 }

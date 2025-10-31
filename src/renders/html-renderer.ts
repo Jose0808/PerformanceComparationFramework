@@ -250,12 +250,12 @@ export class HTMLRenderer {
                 onpremiseContent: DataFormatter.sanitizeForHTML(
                     isFromOnpremise
                         ? subStep.consoleLogs.join('\n')
-                        : (cloudSubStep?.consoleLogs?.join('\n') || 'No data')
+                        : (cloudSubStep?.consoleLogs?.join('\n') || '')
                 ),
                 cloudContent: DataFormatter.sanitizeForHTML(
                     !isFromOnpremise
                         ? subStep.consoleLogs.join('\n')
-                        : (cloudSubStep?.consoleLogs?.join('\n') || 'No data')
+                        : (cloudSubStep?.consoleLogs?.join('\n') || '')
                 )
             });
         } else {
@@ -305,17 +305,20 @@ export class HTMLRenderer {
     }
 
     private renderNetworkRequestsSection(subStep: any, cloudSubStep: any, isFromOnpremise: boolean): string {
-        const onpremiseCount = isFromOnpremise ? (subStep.networkLogs?.length || 0) : (cloudSubStep?.networkLogs?.length || 0);
-        const cloudCount = !isFromOnpremise ? (subStep.networkLogs?.length || 0) : (cloudSubStep?.networkLogs?.length || 0);
+        const onpremiseLogs = isFromOnpremise ? (subStep.networkLogs || []) : (cloudSubStep?.networkLogs || []);
+        const cloudLogs = isFromOnpremise ? (cloudSubStep?.networkLogs || []) : (subStep.networkLogs || []);
+        
+        const onpremiseCount = onpremiseLogs.length;
+        const cloudCount = cloudLogs.length;
         const containerId = subStep.name.replaceAll(" ", "_");
         const context = isFromOnpremise ? 'onpremise' : 'cloud';
 
+        // Siempre pasar onpremise primero, cloud segundo
         let networkComparisons = ComparisonService.compareNetworkRequests(
-            subStep.networkLogs || [],
-            cloudSubStep?.networkLogs || []
+            onpremiseLogs,
+            cloudLogs
         );
 
-        // Sort by duration (ascending by default, prioritizing current context)
         networkComparisons = this.sortNetworkRequests(networkComparisons, 'asc', context);
 
         let content: string;
@@ -339,7 +342,7 @@ export class HTMLRenderer {
             content
         });
     }
-    
+
     // Función auxiliar para ordenar con más opciones
     private sortNetworkRequests(
         comparisons: any[],
@@ -464,7 +467,7 @@ export class HTMLRenderer {
                 </div>
                 <div>
                     <h4 style="margin-bottom: 8px; color: var(--warning);">Cloud (${cloudLogs?.length || 0})</h4>
-                    <pre style="background: var(--surface-alt); padding: 12px; border-radius: 8px; font-size: 0.875rem; max-height: 200px; overflow-y: auto;">${DataFormatter.sanitizeForHTML(cloudLogs?.join('\n') || 'No data')}</pre>
+                    <pre style="background: var(--surface-alt); padding: 12px; border-radius: 8px; font-size: 0.875rem; max-height: 200px; overflow-y: auto;">${DataFormatter.sanitizeForHTML(cloudLogs?.join('\n') || '')}</pre>
                 </div>
             </div>`;
         }

@@ -22,10 +22,14 @@ export class SuscribeOfferPage extends BasePage {
             timer.startStep(appConfig.name, 'Suscribir oferta');
             timer.startSubStep('Espera cargue pantalla: Suscribir oferta');
             const frameSelector = await this.page.locator(this.currentFrame).contentFrame();
-            await frameSelector.getByText("Usuario", { exact: true }).waitFor({
-                state: 'visible',
-                timeout: this.config.test.timeout
-            });
+            await Promise.all([
+                frameSelector.getByText("Usuario", { exact: true }).waitFor({
+                    state: 'visible',
+                    timeout: this.config.test.timeout
+                }),
+                expect(frameSelector.locator("#seller")).not.toBeEmpty(),
+            ]);
+
             await frameSelector.getByText("Siguiente").click();
             await frameSelector.locator(".title").getByText("Suscripción de la Oferta", { exact: true }).waitFor({
                 state: 'visible',
@@ -52,7 +56,9 @@ export class SuscribeOfferPage extends BasePage {
     async offerSelect(offer: string, frameSelector: FrameLocator) {
         await this.fillInput("#inputquerystring", offer, frameSelector);
         await this.clickElement("#productquerybtn", undefined, frameSelector);
-        await this.clickElement("p[title*='Nombre de la Oferta" + offer + "']", undefined, frameSelector);
+        const locator = "p[title*='Nombre de la Oferta" + offer + "']";
+        await expect(frameSelector.locator(locator)).toHaveCount(1);
+        await this.clickElement(locator, undefined, frameSelector);
         await this.clickElement("#groupproduct_btn_sure", undefined, frameSelector);
     }
 

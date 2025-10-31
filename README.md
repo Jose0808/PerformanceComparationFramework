@@ -5,25 +5,22 @@ Automated performance comparison between web applications using Playwright, Type
 ## 🚀 Features
 
 - **Multi-Application Testing**: Compare performance between different web applications
-- **Comprehensive Metrics**: Web Vitals, network metrics, custom timing measurements
+- **Network Metrics**: network metrics, custom timing measurements
 - **Statistical Analysis**: Multiple iterations with statistical significance testing
-- **Advanced Reporting**: HTML dashboards, comparison reports, CSV exports
+- **Advanced Reporting**: HTML dashboards, comparison reports
 - **Parallel Execution**: Configurable parallel test execution
-- **Network Simulation**: Throttling for consistent network conditions
-- **CI/CD Ready**: Docker support and pipeline integration
 
 ## 📋 Prerequisites
 
 - Node.js 18+ 
 - npm or yarn
-- Docker (optional, for containerized execution)
 
 ## 🛠 Installation
 
 1. **Clone the repository:**
    ```bash
    git clone <repository-url>
-   cd performance-comparison-automation
+   cd performance-comparison-framework
    ```
 
 2. **Install dependencies:**
@@ -71,9 +68,6 @@ PARALLEL_INSTANCES=1
 
 - **ITERATIONS**: Number of test runs per application
 - **PARALLEL_INSTANCES**: Concurrent browser instances
-- **NETWORK_CONDITIONS**: Network throttling (4g, 3g, slow-3g)
-- **CAPTURE_WEB_VITALS**: Enable Core Web Vitals collection
-- **THRESHOLD_***: Performance thresholds for pass/fail criteria
 
 ## 🚀 Usage
 
@@ -107,28 +101,22 @@ npm run test:ui
 
 ### Generated Reports
 
-1. **Dashboard** (`dashboard.html`): Executive summary with key metrics
-2. **Comparison Report** (`comparison_report.html`): Side-by-side performance analysis  
-3. **Individual App Reports**: Detailed metrics per application
+1. **Comparison Report** (`testName_time.html`): Executive summary with key metrics
 4. **Playwright HTML Report**: Test execution details
 
 ### Report Locations
 
 ```
 reports/
-├── dashboard.html              # Main dashboard
-├── comparison_report.html      # Detailed comparison
-├── app1_report.html           # App 1 metrics
+├── testName1_time.html      # Detailed comparison
+├── testName2_time.html      # Detailed comparison
 ├── app2_report.html           # App 2 metrics
 ├── playwright-report/         # Playwright HTML report
-├── screenshots/               # Test screenshots
-├── raw-data/                 # CSV exports
 └── SUMMARY.txt               # Text summary
 ```
 
 ### Metrics Collected
 
-- **Core Web Vitals**: LCP, FID, CLS, TTFB, FCP
 - **Loading Performance**: Total load time, DOM load time, network time
 - **Resource Loading**: JS, CSS, image load times
 - **Custom Metrics**: Login time, form processing, navigation
@@ -165,33 +153,6 @@ src/
 - **BasePage/LoginPage**: Page Object Model implementation
 - **PerformanceReporter**: Custom reporting and artifact generation
 
-## 🐳 Docker Support
-
-### Build Docker Image
-
-```bash
-npm run docker:build
-```
-
-### Run in Docker
-
-```bash
-npm run docker:run
-```
-
-### Docker Compose (Advanced)
-
-```yaml
-version: '3.8'
-services:
-  performance-tests:
-    build: .
-    volumes:
-      - ./reports:/app/reports
-      - ./.env:/app/.env
-    environment:
-      - ENVIRONMENT=docker
-```
 
 ## 🔧 Customization
 
@@ -201,10 +162,14 @@ services:
 2. Configure additional APP3_* variables
 3. Update `ConfigManager.ts` to handle new applications
 
-### Custom Metrics
+### Metrics
 
 ```typescript
-await this.metricsCollector.recordCustomMetric('custom_action_time', duration);
+timer.startStep('Login');  
+  timer.startSubStep('Ingresar credenciales');
+  timer.endSubStep();
+timer.endStep();
+
 ```
 
 ### New Test Scenarios
@@ -215,85 +180,10 @@ await this.metricsCollector.recordCustomMetric('custom_action_time', duration);
 
 ### Custom Reports
 
-Extend `PerformanceReporter.ts` to add new report formats:
+Extend `performance-reporter.ts` to add new report formats:
 
 ```typescript
-private async generateCustomReport(data: any): Promise<void> {
-}
-```
-
-## 📈 Performance Analysis
-
-### Statistical Analysis
-
-The tool provides comprehensive statistical analysis:
-
-- **Mean, Median, Standard Deviation**: Central tendency measurements
-- **95th Percentile**: High-end performance analysis  
-- **Outlier Detection**: Identify anomalous results
-- **Regression Detection**: Alert on performance degradation
-
-### Threshold Configuration
-
-Set performance budgets in `.env`:
-
-```bash
-THRESHOLD_LOGIN_TIME=2000      # Maximum acceptable login time
-THRESHOLD_LCP=2500            # Largest Contentful Paint limit
-REGRESSION_THRESHOLD_PERCENTAGE=10  # Acceptable regression %
-```
-
-## 🚀 CI/CD Integration
-
-### GitHub Actions Example
-
-```yaml
-name: Latency tests
-on: [push, pull_request]
-
-jobs:
-  performance:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-      - run: npm ci
-      - run: npm run install:browsers
-      - run: npm test
-      - uses: actions/upload-artifact@v3
-        with:
-          name: performance-reports
-          path: reports/
-```
-
-### Jenkins Pipeline
-
-```groovy
-pipeline {
-    agent any
-    stages {
-        stage('Test') {
-            steps {
-                sh 'npm ci'
-                sh 'npm run install:browsers'
-                sh 'npm test'
-            }
-        }
-        stage('Reports') {
-            steps {
-                publishHTML([
-                    allowMissing: false,
-                    alwaysLinkToLastBuild: true,
-                    keepAll: true,
-                    reportDir: 'reports',
-                    reportFiles: 'dashboard.html',
-                    reportName: 'Performance Report'
-                ])
-            }
-        }
-    }
+private async generateReports(data: any): Promise<void> {
 }
 ```
 
@@ -352,23 +242,9 @@ CAPTURE_NETWORK_LOGS=true npm test
 3. **Monitor test execution time** and optimize as needed
 4. **Clean up old reports** periodically
 
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make changes with tests
-4. Update documentation
-5. Submit pull request
-
 ## 📄 License
 
 MIT License - see LICENSE file for details
-
-## 🆘 Support
-
-- Create GitHub issues for bugs and feature requests
-- Check existing documentation and troubleshooting guide
-- Review sample configurations and examples
 
 ---
 

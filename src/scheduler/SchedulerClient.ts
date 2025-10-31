@@ -12,7 +12,6 @@ export interface SchedulerClientConfig {
 export interface ScheduleCreateRequest {
   name: string;
   cronExpression: string;
-  testPattern?: string;
   testFiles?: string[];
   enabled: boolean;
   options?: {
@@ -47,7 +46,7 @@ export class SchedulerClient extends EventEmitter {
 
   // Iniciar servicio como proceso completamente independiente
   private async startServicePersistent(): Promise<void> {
-    const servicePath = path.join(__dirname, 'SchedulerService.js');
+    const servicePath = path.join(__dirname, process.env.ENVIROMENT !== 'pro' ? 'SchedulerService.ts' : 'SchedulerService.js');
     
     if (!fs.existsSync(servicePath)) {
       throw new Error(`Scheduler service not found: ${servicePath}`);

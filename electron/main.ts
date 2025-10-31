@@ -108,7 +108,7 @@ ipcMain.handle('check-project-structure', async (): Promise<any> => {
   debugger;
   const requiredItems = [
     // { key: 'package.json', path: paths.packageJson, type: 'file' },
-    { key: 'playwright.config.ts', path: paths.configFile, type: 'file' },
+    { key: process.env.ENVIROMENT !== 'pro' ? 'playwright.config.ts' : 'playwright.config.js', path: paths.configFile, type: 'file' },
     { key: 'src/tests', path: paths.testsDir, type: 'directory' },
     { key: 'src/data-driven', path: paths.dataDir, type: 'directory' },
     { key: '.env', path: paths.envFile, type: 'file' },
@@ -378,7 +378,7 @@ ipcMain.handle('verify-installation', async (): Promise<any> => {
     // Contar archivos de test
     if (checks.testsDirectory) {
       const testFiles = fs.readdirSync(paths.testsDir)
-        .filter(file => file.endsWith('.spec.ts'));
+        .filter(file => file.endsWith(process.env.ENVIROMENT !== 'pro' ? '.spec.ts':'.spec.js'));
       checks.testFilesCount = testFiles.length;
       checks.testFiles = testFiles;
     }
@@ -432,7 +432,7 @@ ipcMain.handle('list-test-files', async (): Promise<any> => {
 
         if (stat.isDirectory()) {
           scanDirectory(fullPath, path.join(relativePath, item));
-        } else if (item.endsWith('.spec.ts')) {
+        } else if (item.endsWith(process.env.ENVIROMENT !== 'pro' ? '.spec.ts' : '.spec.js')) {
           testFiles.push({
             name: item,
             relativePath: path.join(relativePath, item),
@@ -494,7 +494,7 @@ let schedulerClient: SchedulerClient | null = null;
 // Inicializar cliente del scheduler
 ipcMain.handle('scheduler-init', async (): Promise<any> => {
   const paths = getProjectPaths();
-  
+
   try {
     if (!schedulerClient) {
       schedulerClient = new SchedulerClient({
@@ -668,8 +668,8 @@ ipcMain.handle('scheduler-stop', async (event: any, scheduleId: string): Promise
 
 // Obtener patrones cron comunes
 ipcMain.handle('scheduler-get-cron-patterns', (): any => {
-  return { 
-    success: true, 
+  return {
+    success: true,
     patterns: [
       { label: 'Cada 5 minutos', value: '*/5 * * * *', description: 'Ejecutar cada 5 minutos' },
       { label: 'Cada 15 minutos', value: '*/15 * * * *', description: 'Ejecutar cada 15 minutos' },

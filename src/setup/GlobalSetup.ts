@@ -21,6 +21,8 @@ async function globalSetup(config: FullConfig): Promise<void> {
     // Display test configuration
     displayTestConfiguration(appConfig, config);
 
+    await cleanupTempFiles(appConfig)
+
     console.log('✅ Global Setup completed successfully\n');
 
   } catch (error) {
@@ -28,6 +30,24 @@ async function globalSetup(config: FullConfig): Promise<void> {
     throw error;
   }
 }
+
+
+/**
+ * Cleanup temporary files
+ */
+async function cleanupTempFiles(config: ConfigManager): Promise<void> {
+  console.log('🧹 Cleaning up temporary files...');
+  const performanceDataDir = './performance-data';
+
+  try {
+    await fs.rm(performanceDataDir, { recursive: true, force: true });
+    console.log(`  ✅ Cleaned up: ${performanceDataDir}`);
+  } catch (error) {
+    console.log(`  ❌ Error Cleaned up: ${performanceDataDir} - Error: ${error}`);
+  }
+
+}
+
 
 /**
  * Create necessary directories for reports and artifacts
